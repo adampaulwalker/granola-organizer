@@ -74,11 +74,13 @@ The tool writes markdown files to a folder. That is the whole integration surfac
 | An Obsidian vault | Notes appear in the vault, backlinks and search included |
 | A git repository | Version history, if you commit on a schedule |
 
-### Using them from Claude in the browser
+### Which Claude can read them
 
-Claude.ai has connectors for Dropbox, Google Drive, Box and OneDrive. Point `transcript_folder` at a folder in one of those, turn the connector on under **Settings → Connectors**, and you can ask about your meetings from a normal chat. Nothing needs to be installed and nothing needs to be running.
+**Claude Code, Claude Desktop, and any editor read the files directly.** This is the reliable path. Point `transcript_folder` anywhere and they work.
 
-A local folder will not work this way. Claude in the browser cannot reach your filesystem, so local folders are for Claude Code, Claude Desktop, or your own editor.
+**Claude in the browser is partial, and worth understanding before you rely on it.** Claude.ai has connectors for Dropbox, Google Drive, Box and OneDrive, so a chat can reach a folder in one of those. But the Google Drive connector's file reader documents its supported types as Google Docs, Slides, Sheets, PDF, Word, Excel, PowerPoint, OpenDocument and images. Plain text and markdown are not on that list. Transcripts here are markdown, so a browser chat may surface them in search without being able to read the contents.
+
+I have not been able to verify the round trip end to end. If you want a browser chat to read these, test it with your own connector and file before depending on it, or keep the transcripts somewhere Claude Code can reach.
 
 ### Two things to watch
 
