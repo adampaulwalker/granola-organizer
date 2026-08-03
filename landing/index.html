@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>granola-router - your Granola meetings, filed by client</title>
+<meta name="description" content="Saves your Granola meeting transcripts as markdown and files each one into the right client folder. Free and open source. Requires a Granola Business plan.">
+<meta property="og:title" content="granola-router">
+<meta property="og:description" content="Your Granola meetings, filed into the right client folder, automatically.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --bg:#ffffff; --surface:#f8f9fb; --text:#1a1a2e; --muted:#5b6472;
+    --accent:#16a34a; --accent-hover:#15803d; --link:#2563eb;
+    --code-bg:#1e1e2e; --code-text:#e2e8f0; --code-dim:#94a3b8;
+    --border:#e5e7eb; --warn-bg:#fffbeb; --warn-border:#fcd34d;
+    --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#0f1117;--surface:#171a21;--text:#e6e8ec;--muted:#9aa4b2;
+          --border:#262b35;--warn-bg:#2a2410;--warn-border:#7c5e10;--link:#7aa7ff;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);
+       line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px}
+  header{padding:72px 0 48px}
+  h1{font-size:clamp(2rem,5vw,2.9rem);line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
+  .lede{font-size:1.2rem;color:var(--muted);margin:0 0 28px;max-width:60ch}
+  h2{font-size:1.5rem;margin:56px 0 16px;letter-spacing:-.01em}
+  h3{font-size:1.05rem;margin:28px 0 8px}
+  p{margin:0 0 16px;max-width:68ch}
+  a{color:var(--link)}
+  code{font-family:var(--mono);font-size:.9em;background:var(--surface);
+       border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+  pre{background:var(--code-bg);color:var(--code-text);padding:16px 18px;border-radius:8px;
+      overflow-x:auto;font-family:var(--mono);font-size:.86rem;line-height:1.6;margin:0 0 16px}
+  pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit}
+  pre .c{color:var(--code-dim)}
+  .btn{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;
+       font-weight:600;padding:14px 26px;border-radius:8px;font-size:1.02rem}
+  .btn:hover{background:var(--accent-hover)}
+  .btn-sub{display:block;font-weight:400;font-size:.82rem;opacity:.85;margin-top:2px}
+  .note{background:var(--warn-bg);border:1px solid var(--warn-border);
+        border-radius:8px;padding:14px 18px;margin:0 0 24px}
+  .note p{margin:0}
+  .card{background:var(--surface);border:1px solid var(--border);
+        border-radius:10px;padding:22px 24px;margin:0 0 18px}
+  .card h3{margin-top:0}
+  .step{display:flex;gap:14px;margin:0 0 14px}
+  .num{flex:0 0 26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;
+       font-size:.85rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .step div:last-child{flex:1}
+  .step p{margin:0 0 6px}
+  table{border-collapse:collapse;width:100%;margin:0 0 20px;font-size:.94rem;display:block;overflow-x:auto}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{font-weight:600}
+  details{border-bottom:1px solid var(--border);padding:14px 0}
+  summary{cursor:pointer;font-weight:600}
+  details p{margin:12px 0 0;color:var(--muted)}
+  footer{margin:72px 0 56px;padding-top:24px;border-top:1px solid var(--border);
+         color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Your meetings, filed into the right client folder</h1>
+  <p class="lede">granola-router saves every Granola transcript as a markdown file
+  and puts it where it belongs, on its own. Then you can ask Claude about any call
+  you have ever had.</p>
+  <a class="btn" href="./granola-router.mcpb" download>
+    Download for Claude Desktop
+    <span class="btn-sub">granola-router.mcpb &middot; 20 MB &middot; macOS</span>
+  </a>
+</header>
+
+<div class="note">
+  <p><strong>You need a Granola Business plan.</strong> This reads Granola's
+  official API, and API keys are a Business feature. It cannot work on the free
+  plan. <a href="#why-paid">Why that trade is deliberate.</a></p>
+</div>
+
+<h2>What you get</h2>
+<p>One markdown file per meeting: the details up top, Granola's summary, then the
+full transcript with who said what and when.</p>
+
+<pre><code><span class="c">---
+title: "Quarterly review"
+date: 2026-07-31 11:30 EDT
+attendees:
+  - dana@example-client.com
+---</span>
+
+<span class="c"># Quarterly review</span>
+
+<span class="c">## Transcript</span>
+
+[00:00] <strong>Me:</strong> Thanks for making the time.
+[00:04] <strong>Dana Smith:</strong> Of course. Where do you want to start?
+[01:12] <strong>Dana Smith:</strong> Twelve percent on the expedited tier,
+        effective the first of next month.
+</code></pre>
+
+<p>That file lands in <code>clients/Example Client/transcripts/</code> without you
+doing anything, because the meeting had someone from that company on the invite.</p>
+
+<h2 id="install">Installing it</h2>
+<p>Two ways. Pick the one that matches how you use Claude.</p>
+
+<div class="card">
+  <h3>Claude Desktop, no terminal</h3>
+  <div class="step"><div class="num">1</div><div>
+    <p><a href="./granola-router.mcpb" download>Download the extension</a> and
+    double-click it. Claude Desktop installs it.</p></div></div>
+  <div class="step"><div class="num">2</div><div>
+    <p>In Granola: <strong>Settings &rarr; Connectors &rarr; API keys</strong>,
+    create a key, and save it to a file called <code>api-key</code> inside a
+    folder named <code>.granola-router</code> in your home directory.</p></div></div>
+  <div class="step"><div class="num">3</div><div>
+    <p>Ask Claude: <em>"turn on always-on saving."</em> That sets up the
+    background job. From then on your meetings file themselves, whether or not
+    Claude is open.</p></div></div>
+
+  <div class="note" style="margin:18px 0 0">
+    <p><strong>macOS will warn you the first time.</strong> The extension is not
+    signed with an Apple developer certificate yet, so Gatekeeper flags anything
+    downloaded from the web. Right-click the file and choose <strong>Open</strong>
+    rather than double-clicking, or run
+    <code>xattr -d com.apple.quarantine ~/Downloads/granola-router.mcpb</code>
+    first. If you would rather not, use the command line below, which is not
+    affected.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Claude Code or Cowork, one command</h3>
+  <pre><code>uv tool install git+https://github.com/adampaulwalker/granola-router</code></pre>
+  <p>Then set it up:</p>
+  <pre><code><span class="c"># save your Granola API key</span>
+mkdir -p ~/.granola-router
+echo 'grn_your_key_here' > ~/.granola-router/api-key
+chmod 600 ~/.granola-router/api-key
+
+<span class="c"># choose where transcripts go</span>
+echo '{"transcript_folder": "~/Documents/Meetings"}' > ~/.granola-router/settings.json
+
+<span class="c"># pull your history, then turn on automatic filing</span>
+granola-router backfill --dry-run   <span class="c"># preview, writes nothing</span>
+granola-router backfill
+granola-router install</code></pre>
+  <p><code>granola-router status</code> tells you whether automatic filing is on,
+  and <code>granola-router uninstall</code> turns it off again.</p>
+</div>
+
+<h2>How it decides where a meeting goes</h2>
+<p>It reads the attendees and the title. A call with
+<code>dana@example-client.com</code> goes to that client's folder. Rules live in a
+small JSON file you control.</p>
+
+<table>
+  <tr><th>Matched on</th><th>Use it for</th></tr>
+  <tr><td>Attendee email domain</td><td>The normal case</td></tr>
+  <tr><td>Title keyword</td><td>Calls with nobody from the company on the invite</td></tr>
+  <tr><td>A single meeting, by id</td><td>The one-off nothing else reaches</td></tr>
+</table>
+
+<p><strong>When it cannot tell, it does not guess.</strong> The meeting goes to a
+holding folder and <code>status</code> tells you why. A transcript in the wrong
+client's folder is worse than one that is visibly unsorted, and roughly half of a
+normal calendar is one-to-ones on personal addresses where nothing identifies a
+company.</p>
+
+<h2>Where the files live</h2>
+<p>You choose the folder. It has been tested writing into Dropbox, Google Drive,
+OneDrive, an Obsidian vault, and plain local disk.</p>
+
+<table>
+  <tr><th>Surface</th><th>Can read your transcripts</th></tr>
+  <tr><td>Claude Code</td><td>Yes, directly</td></tr>
+  <tr><td>Claude Cowork</td><td>Yes, directly. No terminal needed</td></tr>
+  <tr><td>Claude Desktop</td><td>Yes, through this extension</td></tr>
+  <tr><td>Claude in a browser</td><td>No. It cannot reach your filesystem</td></tr>
+</table>
+
+<h2 id="why-paid">Why it needs a paid plan</h2>
+<p>Granola encrypted its local cache in 2026. Every tool that read that file
+stopped working, and several have been retired by their authors since:</p>
+<ul>
+  <li><a href="https://github.com/wassimk/granary">granary</a> &mdash;
+    <em>"keeping up with Granola's cache format changes is a game of whack a mole
+    that isn't worth the maintenance"</em></li>
+  <li><a href="https://github.com/tomelliot/obsidian-granola-sync">obsidian-granola-sync</a>
+    &mdash; Granola moved the encryption key into a Keychain item locked to its own
+    app. <em>"There is no workaround."</em></li>
+</ul>
+<p>The official API is the durable way to get your own transcripts out. It needs
+Granola Business. That is a deliberate trade: paying for a stable interface beats
+rebuilding after every release.</p>
+
+<h2>Questions</h2>
+
+<details><summary>Does Claude need to be open?</summary>
+<p>No. The filing is done by a small background program that macOS starts when you
+log in. Claude is only involved when you want to ask about a meeting.</p></details>
+
+<details><summary>How soon after a call does it appear?</summary>
+<p>A few minutes, not instantly. Granola has to finish writing its summary before
+the API will return the meeting.</p></details>
+
+<details><summary>How do I turn it off?</summary>
+<p><code>granola-router uninstall</code>, or ask Claude to turn off always-on
+saving. Transcripts already saved stay where they are. Note that removing the
+Desktop extension does <em>not</em> stop the background job, since the job runs
+independently of Claude.</p></details>
+
+<details><summary>Does anything leave my machine?</summary>
+<p>Only the request to Granola's own API for your own meetings. Transcripts are
+written straight to your disk. There is no server in the middle, and the tool has
+no third-party dependencies.</p></details>
+
+<details><summary>Can I use it on Windows or Linux?</summary>
+<p>The command-line tool runs anywhere Python does. Automatic filing currently
+uses macOS launchd; on Linux, run <code>granola-router poll --interval 120</code>
+from a systemd user service. The Desktop extension is macOS only for now.</p></details>
+
+<details><summary>What if I already used granola-saver?</summary>
+<p>That was the earlier version, which read the local cache and stopped working
+when Granola encrypted it. This is the replacement. It reuses your old config
+folder if it finds one.</p></details>
+
+<footer>
+  <p>Free and open source, MIT licensed.
+  <a href="https://github.com/adampaulwalker/granola-router">Source on GitHub</a>
+  &middot; Built by <a href="https://atlanticlabs.ai">Adam Walker</a></p>
+  <p>Not affiliated with Granola.</p>
+</footer>
+
+</div>
+</body>
+</html>
