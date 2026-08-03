@@ -1,0 +1,27 @@
+{
+  "_comment": "Example routing map. Copy to ~/.granola-saver/routing-map.json and edit. Precedence: note_overrides, then title_overrides, then email_domains, then title_keywords, then quarantine.",
+
+  "note_overrides": {
+    "not_EXAMPLE1234567": "clients/Example Client/transcripts"
+  },
+
+  "title_overrides": {
+    "widget project": {
+      "folder": "clients/Example Client - Widget/transcripts",
+      "domains": ["example.com"],
+      "_note": "Scoped overrides win over an email match. Use when one company spans several engagements, so the domain alone cannot decide."
+    }
+  },
+
+  "email_domains": {
+    "example.com": "clients/Example Client/transcripts",
+    "another-example.com": "clients/Another Client/transcripts"
+  },
+
+  "title_keywords": {
+    "weekly sync": "clients/Example Client/transcripts",
+    "interview": "hiring/transcripts"
+  },
+
+  "quarantine_folder": "meeting-notes/_unrouted"
+}

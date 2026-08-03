@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+dist/
+build/
+*.egg-info/
+.DS_Store
+
+# Never commit real config or state: they carry client names and local paths
+routing-map.json
+settings.json
+state*.json
+api-key
+*.bak

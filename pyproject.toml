@@ -1,0 +1,35 @@
+[project]
+name = "granola-router"
+version = "1.0.0"
+description = "Save Granola meeting transcripts to markdown and file them into per-client folders, via the official API"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["granola", "meeting-notes", "transcripts", "markdown", "automation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/adampaulwalker/granola-router"
+Repository = "https://github.com/adampaulwalker/granola-router"
+Issues = "https://github.com/adampaulwalker/granola-router/issues"
+
+[project.scripts]
+granola-router = "granola_router.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["granola_router"]
