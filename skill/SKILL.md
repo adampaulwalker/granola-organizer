@@ -1,105 +1,127 @@
 ---
 name: granola-router
-description: Save Granola meeting transcripts to markdown and file them into per-client folders. Use for finding what was said in a past meeting, saving new meetings to disk, diagnosing why a meeting was not filed, and adding routing rules. Triggers on "save my meetings", "sync my granola notes", "what did we decide in the call with", "where is the transcript from", "why is this meeting unrouted", "file my transcripts".
+description: Save Granola meeting transcripts to markdown and file them into per-client folders. Use for finding what was said in a past meeting, checking whether meetings are being saved, turning automatic saving on or off, and diagnosing why a meeting was not filed. Triggers on "what did we decide in the call with", "where is the transcript from", "save my meetings", "sync my granola notes", "why is this meeting unrouted", "turn on automatic saving".
 ---
 
 # granola-router
 
-Drives the `granola-router` command line tool, which pulls meetings from Granola's
-official API and writes each one as a markdown file in the right client folder.
+Meeting transcripts are pulled from Granola's API and written as markdown, each
+one filed into a client folder chosen from the attendees and the title.
 
-## Before anything else
+## Work out which interface you have, first
 
-Run `granola-router status`. It prints the transcript folder, how many meetings are
-tracked, and everything currently unfiled with the reason. Almost every question is
-answerable from that output plus a grep, without touching the API.
+This ships in two places with different capabilities. Check before doing anything.
 
-```bash
-granola-router status
-```
+**If `granola_*` MCP tools are available** (Claude Desktop extension), use only
+those. There is no shell and no `granola-router` command. Never suggest
+installing a command-line tool unless the person asks for it.
 
-**If the command is not found, stop there.** Do not search the machine for a similar
-tool, do not inspect other installs, and do not try to run the package another way.
-Tell the user granola-router is not installed and give them the one line that fixes
-it:
+**If Bash is available and `granola-router` runs**, use the command line.
+
+**If neither**, say so plainly and stop. In a shell environment where the
+command is missing, the fix is one line:
 
 ```bash
-uv tool install granola-router     # or: pipx install granola-router
+uv tool install git+https://github.com/adampaulwalker/granola-router
 ```
 
-Then stop and wait. Everything below assumes the command exists, and guessing at a
-substitute produces confident answers about the wrong tool.
+Do not go looking for a similar tool elsewhere on the machine. A confident
+answer about the wrong tool is worse than no answer.
 
-**If it reports no API key**, the user needs a Granola **Business** plan, then
-Settings → Connectors → API keys, saved to `~/.granola-router/api-key`. Say that and
-stop; there is nothing to diagnose until a key exists.
+## What reads and what writes
+
+Check this before every action. Getting it wrong pulls real meeting data onto
+disk during what someone thought was a look around.
+
+| | Reads only | Writes files | Changes background filing |
+|---|---|---|---|
+| MCP | `granola_status`, `granola_list_meetings`, `granola_get_transcript`, `granola_search` | `granola_sync_now` | `granola_enable_always_on`, `granola_disable_always_on` |
+| CLI | `granola-router status`, `granola-router domains`, `granola-router backfill --dry-run` | `granola-router poll --once`, `granola-router backfill` | `granola-router install`, `granola-router uninstall` |
+
+Never run anything in the right-hand columns while inspecting, diagnosing,
+searching, or setting up a demo. Only when the person has actually asked to
+sync, backfill, or change automatic filing.
+
+`granola_sync_now` and `granola-router backfill` reach Granola's API and write
+to disk. Say what will happen and where before running either. On the command
+line, offer `granola-router backfill --dry-run` first; the MCP tool has no
+preview, so ask instead.
+
+## Who does the filing
+
+A background job does, installed on the machine and run by the operating
+system. Not this skill, and not Claude. It keeps filing with Claude closed, and
+turning it on is a one-off:
+
+- MCP: `granola_enable_always_on` / `granola_disable_always_on`
+- CLI: `granola-router install` / `granola-router uninstall`
+- Check the current state with `granola_status` or `granola-router status`, whichever you have
+
+Removing the Claude Desktop extension does **not** stop the background job,
+because the job is deliberately independent of Claude. Turn it off first, or run
+`granola-router uninstall` from a terminal afterwards.
+
+A meeting appears a few minutes after the call, not immediately. Granola has to
+finish writing its summary before the API will return it. If something is
+missing, say that rather than reporting it as lost.
 
 ## Finding what was said
 
-Transcripts are markdown on disk. Search them directly rather than calling the API.
+**MCP:** `granola_search` for a phrase, then `granola_get_transcript` with the
+`note_id` it returns. Do not pass a path or a URL; the id comes from
+`granola_search` or `granola_list_meetings`.
 
-```bash
-grep -ril "pricing" "$(granola-router status | awk -F': ' '/transcript root/{print $2}')"
-```
+**CLI:** the transcript folder is the `transcript_folder` value in `granola-router status`. Files are markdown,
+so search them directly rather than calling the API.
 
-Each file has front matter with `title`, `date`, `attendees` and `granola_id`, then
-the AI summary, then the full timestamped transcript. Read the file and answer from
-it. Quote the transcript rather than paraphrasing when the user asks what someone
-said.
-
-## Saving new meetings
-
-```bash
-granola-router poll --once        # pull anything new since the last run
-granola-router backfill --dry-run # show where everything would go, write nothing
-granola-router backfill           # write it
-```
-
-Always offer `--dry-run` first when the user has not run a backfill before. A meeting
-only appears once Granola has generated its summary and transcript, so a call that
-just ended may not be there yet. Say that rather than reporting it as missing.
+Each file carries front matter with the title, date, attendees and `granola_id`,
+then the summary, then the full timestamped transcript. Quote the transcript
+when asked what somebody said, rather than paraphrasing it.
 
 ## When a meeting was not filed
 
-Unfiled meetings sit in the quarantine folder, and `status` lists each with a reason:
+Unfiled meetings sit in a quarantine folder. `granola_status` and `granola-router status` both list them with a reason:
 
-| Reason | Meaning | Fix |
+| Reason | Meaning | What fixes it |
 |---|---|---|
-| `no_attendees` | Only the account holder was on the invite | Add a `title_keywords` rule |
-| `unknown` | External attendees, but no rule matched their domain | Add an `email_domains` rule |
-| `ambiguous` | Two rules disagreed | Add a scoped `title_overrides` rule |
+| `no_attendees` | Only the account holder was on the invite | A `title_keywords` rule |
+| `unknown` | External attendees, but no rule matched their domain | An `email_domains` rule |
+| `ambiguous` | Two rules disagreed | A scoped `title_overrides` rule |
 
-`granola-router domains` lists attendee domains that have no rule yet, which is the
-fastest way to see what is worth adding.
+This is deliberate. When nothing matches, the tool quarantines rather than
+guessing, because a transcript in the wrong client's folder is worse than one
+that is visibly unsorted. Never infer a client from weak evidence.
 
-Rules live in `~/.granola-router/routing-map.json`. Editing it re-files existing
-transcripts on the next run, so a rule added today fixes the whole history.
+## Changing the routing rules
 
-## Adding a rule
+Rules live in `routing-map.json` in the config folder, which status reports as `config_folder`.
+Precedence runs `note_overrides`, `title_overrides`, `email_domains`,
+`title_keywords`.
 
-Read the current map first, then add to the right tier. Precedence runs
-`note_overrides`, `title_overrides`, `email_domains`, `title_keywords`.
+Use `email_domains` when the client has its own domain. Use `title_keywords`
+when they are on a personal address but the title names them. Use
+`note_overrides`, keyed by the meeting's `granola_id`, for a single meeting no
+rule can reach.
 
-Use `email_domains` when the client has their own domain. Use `title_keywords` when
-they are on a personal address and the meeting title names them. Use `note_overrides`
-for a single meeting nothing else can reach.
+**CLI:** read the map, confirm the client and folder with the person, then edit
+it. Editing changes configuration immediately but moves nothing on its own;
+files are re-filed by the next background run, or by `granola-router backfill`.
+Preview with `granola-router backfill --dry-run` before writing.
 
-After editing, confirm with a dry run before writing:
+**MCP:** there is no tool for editing rules. Work out which rule is needed and
+tell the person exactly what to add and where. Do not claim to have changed
+anything.
 
-```bash
-granola-router backfill --dry-run
-```
+`granola-router domains` lists attendee domains with no rule yet, which is the
+quickest way to see what is worth adding. There is no MCP equivalent; from
+Desktop, infer it from `granola_list_meetings` and say that is what you did.
 
 ## Things to get right
 
-Never invent a routing rule for a client the user has not confirmed. Filing a
-transcript into the wrong client's folder is worse than leaving it unfiled, which is
-why the tool quarantines rather than guesses.
+Never invent a routing rule for a client the person has not confirmed.
 
-Do not run `backfill` without saying what it will do first. It can write hundreds of
-files.
+Never report a meeting as filed unless a tool result says so.
 
-If the user asks where to keep the transcripts, the tool writes to any folder. A
-folder inside Dropbox, Google Drive, Box or OneDrive is readable from Claude in the
-browser through that service's connector. A local folder is readable by Claude Code
-and Claude Desktop but not from a browser chat.
+If asked where to keep transcripts: any folder works. A folder inside Dropbox,
+Google Drive, Box or OneDrive syncs, and Claude Code and Cowork read local files
+directly. Claude in the browser cannot reach the filesystem.
