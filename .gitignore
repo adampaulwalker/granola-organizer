@@ -13,3 +13,8 @@ settings.json
 state*.json
 api-key
 *.bak
+
+# Build output: the binary is large and rebuildable from build-extension.sh
+.venv-build/
+extension/granola-router-mcp
+*.mcpb

@@ -1,0 +1,32 @@
+{
+  "manifest_version": "0.2",
+  "name": "granola-router",
+  "display_name": "Granola Router",
+  "version": "1.0.0",
+  "description": "Saves your Granola meeting transcripts as markdown and files each one into the right client folder. Ask Claude about any past call. Requires a Granola Business plan.",
+  "long_description": "Every meeting becomes a markdown file with the full transcript, filed into a folder chosen from the attendees and the title. Turn on always-on saving and it keeps filing in the background, with Claude closed. Uses Granola's official API, so it does not break when the app updates.",
+  "author": { "name": "Adam Walker" },
+  "homepage": "https://github.com/adampaulwalker/granola-router",
+  "documentation": "https://github.com/adampaulwalker/granola-router#readme",
+  "server": {
+    "type": "binary",
+    "entry_point": "granola-router-mcp",
+    "mcp_config": {
+      "command": "${__dirname}/granola-router-mcp",
+      "args": [],
+      "env": {}
+    }
+  },
+  "tools": [
+    {"name": "granola_status", "description": "Whether automatic filing is on, where transcripts are saved, and what is unfiled"},
+    {"name": "granola_list_meetings", "description": "List saved meetings and the folder each was filed into"},
+    {"name": "granola_get_transcript", "description": "Read one saved meeting transcript"},
+    {"name": "granola_search", "description": "Find saved meetings whose transcript mentions a phrase"},
+    {"name": "granola_sync_now", "description": "Fetch and file meetings that have finished processing"},
+    {"name": "granola_enable_always_on", "description": "Save meetings automatically, even when Claude is closed"},
+    {"name": "granola_disable_always_on", "description": "Stop saving automatically"}
+  ],
+  "keywords": ["granola", "meeting-notes", "transcripts", "markdown"],
+  "compatibility": { "platforms": ["darwin"] },
+  "license": "MIT"
+}

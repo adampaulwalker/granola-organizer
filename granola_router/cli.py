@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 from .api import GranolaAPIError, MissingAPIKey
+from . import service
 from .sync import LockHeld, ProcessLock, STATE_FILE, Syncer, load_json, transcript_root
 
 POLL_SECONDS = 120
@@ -36,7 +37,9 @@ def cmd_backfill(args: argparse.Namespace) -> int:
 
 def cmd_poll(args: argparse.Namespace) -> int:
     if args.once:
-        with ProcessLock():
+        # Lock first, then construct: Syncer reads state in __init__, so building
+        # it outside the lock can capture state another writer is mid-way through.
+        with ProcessLock(wait_seconds=180):
             stats = Syncer(dry_run=args.dry_run).poll_once()
             print(stats.render())
         return 0
@@ -59,79 +62,27 @@ def cmd_poll(args: argparse.Namespace) -> int:
         time.sleep(args.interval)
 
 
-LAUNCH_LABEL = "com.granola-router.poll"
-LAUNCH_PLIST = Path.home() / "Library/LaunchAgents" / f"{LAUNCH_LABEL}.plist"
-LOG_DIR = Path.home() / "Library/Logs/granola-router"
-
-PLIST = """<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key><string>{label}</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>{python}</string>
-        <string>-m</string>
-        <string>granola_router.cli</string>
-        <string>poll</string>
-        <string>--interval</string>
-        <string>{interval}</string>
-    </array>
-    <key>RunAtLoad</key><true/>
-    <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
-    <key>ThrottleInterval</key><integer>60</integer>
-    <key>StandardOutPath</key><string>{log}/poll.log</string>
-    <key>StandardErrorPath</key><string>{log}/poll.err</string>
-</dict>
-</plist>
-"""
-
-
-def background_running() -> bool:
-    """True when the background poller is loaded in launchd."""
-    try:
-        out = subprocess.run(["launchctl", "list"], capture_output=True, text=True, timeout=10)
-        return LAUNCH_LABEL in out.stdout
-    except Exception:
-        return False
-
-
 def cmd_install(args: argparse.Namespace) -> int:
-    """Set up the background job that files meetings automatically."""
-    if sys.platform != "darwin":
-        print("error: automatic filing is macOS only for now. Use a cron job or a "
-              "systemd timer running: granola-router poll --interval 120", file=sys.stderr)
+    r = service.install_launch_agent(interval=args.interval)
+    if not r.get("ok"):
+        print(f"error: {r.get('error')}", file=sys.stderr)
         return 5
-
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    LAUNCH_PLIST.parent.mkdir(parents=True, exist_ok=True)
-    LAUNCH_PLIST.write_text(PLIST.format(
-        label=LAUNCH_LABEL, python=sys.executable,
-        interval=args.interval, log=LOG_DIR,
-    ))
-    subprocess.run(["launchctl", "unload", str(LAUNCH_PLIST)],
-                   capture_output=True)  # ignore "not loaded"
-    r = subprocess.run(["launchctl", "load", str(LAUNCH_PLIST)], capture_output=True, text=True)
-    if r.returncode != 0:
-        print(f"error: could not start it: {r.stderr.strip()}", file=sys.stderr)
-        return 5
-
-    print(f"Automatic filing is on. It checks every {args.interval} seconds.")
-    print("It starts by itself when you log in, and keeps running in the background.")
+    print(f"Automatic filing is on. It checks every {r['interval']} seconds.")
+    print("It starts by itself when you log in and runs in the background.")
     print("Claude does not need to be open.\n")
-    print(f"  Pause it   : granola-router uninstall")
-    print(f"  Check it   : granola-router status")
-    print(f"  Logs       : {LOG_DIR}/poll.log")
+    if r.get("upgraded"):
+        print(f"  Updated the background copy to {r.get('binary')}")
+    print("  Turn it off : granola-router uninstall")
+    print("  Check it    : granola-router status")
+    print(f"  Logs        : {service.LOG_DIR / 'poll.log'}")
     return 0
 
 
 def cmd_uninstall(_: argparse.Namespace) -> int:
-    """Stop the background job. Files already saved are left alone."""
-    if not LAUNCH_PLIST.exists():
+    r = service.uninstall_launch_agent()
+    if not r.get("was_installed"):
         print("Automatic filing was not set up, so there is nothing to stop.")
         return 0
-    subprocess.run(["launchctl", "unload", str(LAUNCH_PLIST)], capture_output=True)
-    LAUNCH_PLIST.unlink(missing_ok=True)
     print("Automatic filing is off. It will not start again at login.")
     print("Everything already saved stays where it is.")
     print("You can still file on demand with: granola-router poll --once")
@@ -148,8 +99,16 @@ def cmd_status(_: argparse.Namespace) -> int:
         if rec.get("outcome"):
             outcomes[rec["outcome"]] = outcomes.get(rec["outcome"], 0) + 1
 
-    on = background_running()
-    print(f"automatic filing: {'ON - checks every couple of minutes' if on else 'OFF - run granola-router install to turn it on'}")
+    ag = service.launch_agent_state()
+    if ag["broken"]:
+        label = "BROKEN - points at a missing binary; run granola-router install"
+    elif ag["running"]:
+        label = "ON - checks every couple of minutes, with or without Claude open"
+    elif ag["installed"]:
+        label = "INSTALLED BUT NOT RUNNING - run granola-router install"
+    else:
+        label = "OFF - run granola-router install to turn it on"
+    print(f"automatic filing: {label}")
     print(f"transcript root : {transcript_root()}")
     print(f"state file      : {STATE_FILE}")
     print(f"last watermark  : {state.get('watermark') or 'never'}")

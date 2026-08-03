@@ -241,21 +241,109 @@ def test_config_dir_honours_env_override(tmp_path, monkeypatch):
     assert "granola" in str(A.DATA_DIR)
 
 
-def test_install_plist_is_wellformed_and_self_contained(tmp_path, monkeypatch):
-    """The generated launchd job must use absolute paths and survive plutil."""
+
+# -- background job management --------------------------------------------
+
+def test_install_plist_is_wellformed(tmp_path, monkeypatch):
+    """The generated launchd job must use absolute paths and survive plistlib."""
     import plistlib, subprocess as sp
-    from granola_router import cli
-    monkeypatch.setattr(cli, "LAUNCH_PLIST", tmp_path / "test.plist")
-    monkeypatch.setattr(cli, "LOG_DIR", tmp_path / "logs")
-    monkeypatch.setattr(cli.sys, "platform", "darwin")
-    monkeypatch.setattr(cli.subprocess, "run",
+    from granola_router import service
+    monkeypatch.setattr(service, "PLIST_PATH", tmp_path / "test.plist")
+    monkeypatch.setattr(service, "LOG_DIR", tmp_path / "logs")
+    monkeypatch.setattr(service.sys, "platform", "darwin")
+    monkeypatch.setattr(service.subprocess, "run",
                         lambda *a, **k: sp.CompletedProcess(a, 0, "", ""))
-    import argparse
-    cli.cmd_install(argparse.Namespace(interval=120))
+    r = service.install_launch_agent(interval=120)
+    assert r["ok"], r
     data = plistlib.loads((tmp_path / "test.plist").read_bytes())
-    assert data["Label"] == cli.LAUNCH_LABEL
+    assert data["Label"] == service.LABEL
     assert data["RunAtLoad"] is True
-    argv = data["ProgramArguments"]
-    assert argv[0].startswith("/"), "python path must be absolute for launchd"
-    assert "granola_router.cli" in argv and "poll" in argv
-    assert "120" in argv
+    assert data["ProgramArguments"][0].startswith("/"), "launchd needs an absolute path"
+    assert "poll" in data["ProgramArguments"]
+
+
+def test_daemon_never_points_into_the_extension_folder(tmp_path, monkeypatch):
+    """A launch agent aimed inside Claude's extension dir breaks on uninstall."""
+    from granola_router import service
+    ext = tmp_path / "Claude" / "extensions" / "granola" / "granola-router"
+    ext.parent.mkdir(parents=True)
+    ext.write_bytes(b"binary")
+    monkeypatch.setattr(service, "BIN_ROOT", tmp_path / "stable")
+    monkeypatch.setattr(service, "VERSIONS", tmp_path / "stable" / "versions")
+    monkeypatch.setattr(service, "CURRENT", tmp_path / "stable" / "current")
+    monkeypatch.setattr(service, "running_frozen", lambda: True)
+    monkeypatch.setattr(service.sys, "executable", str(ext))
+    r = service.install_stable_binary()
+    assert r["stable"] and "extensions" not in r["path"]
+    assert "extensions" not in service.daemon_argv(120)[0]
+
+
+def test_new_build_repoints_current_so_upgrades_take_effect(tmp_path, monkeypatch):
+    """Without this, launchd keeps running the old binary after an upgrade."""
+    from granola_router import service
+    monkeypatch.setattr(service, "BIN_ROOT", tmp_path / "s")
+    monkeypatch.setattr(service, "VERSIONS", tmp_path / "s" / "versions")
+    monkeypatch.setattr(service, "CURRENT", tmp_path / "s" / "current")
+    monkeypatch.setattr(service, "running_frozen", lambda: True)
+    live = tmp_path / "s" / "current" / "granola-router"
+
+    v1 = tmp_path / "v1"; v1.write_bytes(b"BUILD ONE")
+    monkeypatch.setattr(service.sys, "executable", str(v1))
+    a = service.install_stable_binary()
+    assert a["upgraded"] and live.read_bytes() == b"BUILD ONE"
+
+    assert service.install_stable_binary()["upgraded"] is False, "same binary should no-op"
+
+    v2 = tmp_path / "v2"; v2.write_bytes(b"BUILD TWO")
+    monkeypatch.setattr(service.sys, "executable", str(v2))
+    b = service.install_stable_binary()
+    assert b["upgraded"] and b["version"] != a["version"]
+    assert live.read_bytes() == b"BUILD TWO", "current must point at the new build"
+
+
+def test_status_flags_a_launch_agent_pointing_at_nothing(tmp_path, monkeypatch):
+    """The exact failure that killed the previous daemon when its repo moved."""
+    import plistlib
+    from granola_router import service
+    plist = tmp_path / "p.plist"
+    with open(plist, "wb") as fh:
+        plistlib.dump({"Label": service.LABEL,
+                       "ProgramArguments": [str(tmp_path / "gone"), "poll"]}, fh)
+    monkeypatch.setattr(service, "PLIST_PATH", plist)
+    st = service.launch_agent_state()
+    assert st["installed"] and st["broken"]
+
+
+def test_service_functions_print_nothing(capsys, tmp_path, monkeypatch):
+    """stdout must stay clean: these run inside a stdio MCP server."""
+    from granola_router import service
+    monkeypatch.setattr(service, "PLIST_PATH", tmp_path / "none.plist")
+    service.launch_agent_state()
+    service.uninstall_launch_agent()
+    service.daemon_argv(120)
+    assert capsys.readouterr().out == "", "service layer must not write to stdout"
+
+
+def test_archive_is_visible_without_state(tmp_path, monkeypatch):
+    """Losing state.json must not make an intact archive look empty."""
+    pytest.importorskip("mcp", reason="MCP SDK is only needed to build the extension")
+    from granola_router import mcp_server as ms
+    from granola_router.writer import render, write_atomic
+    from granola_router.api import Meeting
+
+    root = tmp_path / "Meetings" / "clients" / "Acme"
+    m = Meeting(id="not_ONDISK00001", title="Acme sync",
+                created_at="2026-07-01T10:00:00Z", updated_at="2026-07-01T10:00:00Z",
+                attendee_emails=["a@acme.com"],
+                scheduled_start="2026-07-01T06:00:00-04:00",
+                transcript_entries=[{"text": "we agreed on the price",
+                                     "start_time": "2026-07-01T10:00:00Z",
+                                     "speaker": {"attribution": "me"}}])
+    write_atomic(root / "2026-07-01-acme-sync.md", render(m))
+
+    monkeypatch.setattr(ms, "transcript_root", lambda: tmp_path / "Meetings")
+    monkeypatch.setattr(ms, "_state_notes", dict)   # state wiped
+
+    found = ms._saved_meetings()
+    assert "not_ONDISK00001" in found, "disk scan must recover the archive"
+    assert ms.granola_search("agreed on the price")["count"] == 1
