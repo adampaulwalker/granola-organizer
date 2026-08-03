@@ -18,3 +18,4 @@ api-key
 .venv-build/
 extension/granola-router-mcp
 *.mcpb
+granola-router-mcp.spec
