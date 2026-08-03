@@ -239,3 +239,23 @@ def test_config_dir_honours_env_override(tmp_path, monkeypatch):
     monkeypatch.delenv("GRANOLA_ROUTER_HOME")
     importlib.reload(A)
     assert "granola" in str(A.DATA_DIR)
+
+
+def test_install_plist_is_wellformed_and_self_contained(tmp_path, monkeypatch):
+    """The generated launchd job must use absolute paths and survive plutil."""
+    import plistlib, subprocess as sp
+    from granola_router import cli
+    monkeypatch.setattr(cli, "LAUNCH_PLIST", tmp_path / "test.plist")
+    monkeypatch.setattr(cli, "LOG_DIR", tmp_path / "logs")
+    monkeypatch.setattr(cli.sys, "platform", "darwin")
+    monkeypatch.setattr(cli.subprocess, "run",
+                        lambda *a, **k: sp.CompletedProcess(a, 0, "", ""))
+    import argparse
+    cli.cmd_install(argparse.Namespace(interval=120))
+    data = plistlib.loads((tmp_path / "test.plist").read_bytes())
+    assert data["Label"] == cli.LAUNCH_LABEL
+    assert data["RunAtLoad"] is True
+    argv = data["ProgramArguments"]
+    assert argv[0].startswith("/"), "python path must be absolute for launchd"
+    assert "granola_router.cli" in argv and "poll" in argv
+    assert "120" in argv
