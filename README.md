@@ -63,6 +63,31 @@ granola-router backfill --dry-run   # see where everything would go
 granola-router backfill             # write it
 ```
 
+## Where to put the files
+
+The tool writes markdown files to a folder. That is the whole integration surface, so anything that reads files off disk works with no configuration on this side.
+
+| Set `transcript_folder` to | You get |
+|---|---|
+| A folder in Dropbox, Google Drive, Box or OneDrive | Transcripts sync, and Claude reads them in the browser through that service's connector |
+| A local folder | Claude Code and Claude Desktop read them directly |
+| An Obsidian vault | Notes appear in the vault, backlinks and search included |
+| A git repository | Version history, if you commit on a schedule |
+
+### Using them from Claude in the browser
+
+Claude.ai has connectors for Dropbox, Google Drive, Box and OneDrive. Point `transcript_folder` at a folder in one of those, turn the connector on under **Settings → Connectors**, and you can ask about your meetings from a normal chat. Nothing needs to be installed and nothing needs to be running.
+
+A local folder will not work this way. Claude in the browser cannot reach your filesystem, so local folders are for Claude Code, Claude Desktop, or your own editor.
+
+### Two things to watch
+
+**Keep the files downloaded, not online-only.** Google Drive's streaming mode and Dropbox's online-only setting leave placeholders on disk rather than real files. Anything reading them gets nothing. Mark the folder "Available offline".
+
+**Run the poller on one machine.** The lock that stops two writers is per-machine. Two machines polling into the same synced folder will each write the same filenames, and your sync service resolves that by making conflicted copies. Run it in one place and let sync distribute the results.
+
+**A shared folder shares the transcripts.** Filing client calls into a folder other people can see means they can read those calls. Worth a deliberate look at who has access before pointing this at a shared drive.
+
 ## Routing
 
 Copy `routing-map.example.json` to `~/.granola-router/routing-map.json`. Rules are checked in this order, and the first confident match wins:
