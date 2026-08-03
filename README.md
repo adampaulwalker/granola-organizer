@@ -33,9 +33,21 @@ The file lands in a folder chosen from the meeting's attendees and title, so a c
 
 ## Install
 
+Not on PyPI yet, so install straight from this repository:
+
 ```bash
-uv tool install granola-router     # or: pipx install granola-router
+uv tool install git+https://github.com/adampaulwalker/granola-router
 ```
+
+or with pipx:
+
+```bash
+pipx install git+https://github.com/adampaulwalker/granola-router
+```
+
+Either one puts a `granola-router` command on your path. It has no third-party
+dependencies, so nothing else gets pulled in. `uv tool uninstall granola-router`
+removes it.
 
 Generate an API key in the Granola desktop app under **Settings → Connectors → API keys**, then:
 
@@ -136,11 +148,26 @@ granola-router domains          # attendee domains with no rule yet
 
 ## Running it continuously
 
-`poll` checks for new meetings on an interval. On macOS, run it under launchd:
-
 ```bash
-granola-router poll --interval 120
+granola-router install     # automatic filing on
+granola-router uninstall   # off
 ```
+
+`install` registers a launch agent, so the tool starts on its own when you log in
+and keeps running in the background. Claude does not need to be open for this;
+the filing is a plain background program with no connection to Claude at all.
+
+`uninstall` stops it and prevents it starting again. Files already saved stay
+where they are. You can still file on demand with `granola-router poll --once`.
+
+`granola-router status` opens by telling you whether automatic filing is on.
+
+macOS only for now. On Linux, run `granola-router poll --interval 120` from a
+systemd user service or a cron job.
+
+A meeting appears a few minutes after the call rather than immediately, because
+the API only returns notes once Granola has finished generating the summary and
+transcript.
 
 A meeting appears once Granola has generated its summary and transcript, which is some minutes after the call ends rather than immediately. That's an API constraint, not a bug — the API only returns notes that have finished processing.
 
