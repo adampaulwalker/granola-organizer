@@ -117,6 +117,10 @@ def granola_status() -> Dict[str, Any]:
     """Whether automatic filing is on, where transcripts are saved, and what is unfiled."""
     notes = _state_notes()
     agent = service.launch_agent_state()
+    # "on" now requires a live process id and a fresh heartbeat, not merely a
+    # plist that launchctl accepted. Reporting "on" for a job that loaded and
+    # exited is how this shipped broken the first time.
+    verdict = service.filing_status(agent)
     quarantined = [
         {"title": r.get("title"), "reason": r.get("reason"), "outcome": r.get("outcome")}
         for r in notes.values()
@@ -124,12 +128,11 @@ def granola_status() -> Dict[str, Any]:
     ]
     return {
         "ok": True,
-        "automatic_filing": (
-            "broken" if agent["broken"] else
-            "on" if agent["running"] else
-            "installed_not_running" if agent["installed"] else "off"
-        ),
-        "runs_without_claude": bool(agent["running"]),
+        "automatic_filing": verdict["status"],
+        "automatic_filing_detail": verdict["reason"],
+        "runs_without_claude": verdict["status"] in ("on", "starting"),
+        "daemon_pid": agent.get("pid"),
+        "last_check_seconds_ago": agent.get("heartbeat_age_seconds"),
         "transcript_folder": str(transcript_root()),
         "config_folder": str(DATA_DIR),
         "meetings_saved": len(_saved_meetings()),
@@ -234,16 +237,20 @@ def granola_sync_now() -> Dict[str, Any]:
 def granola_enable_always_on(interval_seconds: int = 120) -> Dict[str, Any]:
     """Turn on automatic filing, so meetings are saved even when Claude is closed."""
     interval = max(60, min(int(interval_seconds), 3600))
+    # install_launch_agent waits for a live process id before returning ok, so
+    # this cannot report success for a job that exited on startup.
     r = service.install_launch_agent(interval=interval)
     if not r.get("ok"):
-        return _err(r.get("error", "could not turn on automatic filing"))
+        return _err(r.get("error", "could not turn on automatic filing"),
+                    state=r.get("state"))
     return {
         "ok": True, "interval_seconds": interval,
         "upgraded_binary": r.get("upgraded", False),
-        "message": ("Automatic filing is on. It starts by itself when you log in "
-                    "and keeps running with Claude closed. Removing this extension "
-                    "will NOT stop it; turn it off here first, or run "
-                    "'granola-router uninstall' from Terminal."),
+        "daemon_pid": r.get("pid"),
+        "message": ("Automatic filing is on and confirmed running. It starts by "
+                    "itself when you log in and keeps running with Claude closed. "
+                    "Removing this extension will NOT stop it; turn it off here "
+                    "first, or run 'granola-router uninstall' from Terminal."),
     }
 
 
