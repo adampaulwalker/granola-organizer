@@ -76,11 +76,27 @@ The tool writes markdown files to a folder. That is the whole integration surfac
 
 ### Which Claude can read them
 
-**Claude Code, Claude Desktop, and any editor read the files directly.** This is the reliable path. Point `transcript_folder` anywhere and they work.
+Local file access differs by surface, and it decides where this is useful:
 
-**Claude in the browser is partial, and worth understanding before you rely on it.** Claude.ai has connectors for Dropbox, Google Drive, Box and OneDrive, so a chat can reach a folder in one of those. But the Google Drive connector's file reader documents its supported types as Google Docs, Slides, Sheets, PDF, Word, Excel, PowerPoint, OpenDocument and images. Plain text and markdown are not on that list. Transcripts here are markdown, so a browser chat may surface them in search without being able to read the contents.
+| Surface | Reads the transcripts | Notes |
+|---|---|---|
+| **Claude Code** | Yes | Reads and greps the folder directly |
+| **Claude Cowork** | Yes | Local filesystem and Python, no command line needed |
+| Claude Desktop | Only via an MCP filesystem server | Not available by default |
+| claude.ai in the browser | No | Cannot reach your filesystem |
 
-I have not been able to verify the round trip end to end. If you want a browser chat to read these, test it with your own connector and file before depending on it, or keep the transcripts somewhere Claude Code can reach.
+**Cowork is the easiest fit if you don't live in a terminal.** It reads local files and runs the tool without you needing the command line, so the skill in `skill/` works there the same way it does in Claude Code.
+
+On the browser: claude.ai has connectors for Dropbox, Google Drive, Box and OneDrive, so a chat can reach a folder in one of those. But the Google Drive connector's file reader documents its supported types as Google Docs, Slides, Sheets, PDF, Office formats and images. Plain text and markdown are not on that list, and these transcripts are markdown. A browser chat may surface them in search without being able to read the contents. I have not verified the round trip, so treat browser access as untested rather than supported.
+
+### Installing the skill
+
+`skill/SKILL.md` teaches Claude to drive the tool in plain language, so you can ask "what did we decide with Dana" instead of remembering subcommands.
+
+- **Claude Code:** copy the `skill/` folder into `~/.claude/skills/granola-router/`
+- **Cowork:** add the markdown skill to your Cowork project
+
+Triggers are conversational in both. Slash commands only exist in Claude Code.
 
 ### Two things to watch
 
