@@ -226,3 +226,16 @@ def test_routing_version_covers_code_version_not_just_config(isolate, tmp_path, 
     monkeypatch.setattr(S, "ROUTING_LOGIC_VERSION", R.ROUTING_LOGIC_VERSION)
     after = _syncer(tmp_path, routing_map=rmap).routing_version
     assert before != after
+
+
+def test_config_dir_honours_env_override(tmp_path, monkeypatch):
+    """GRANOLA_ROUTER_HOME lets a demo or a test run without touching real state."""
+    import importlib
+    from granola_router import api as A
+    monkeypatch.setenv("GRANOLA_ROUTER_HOME", str(tmp_path / "cfg"))
+    importlib.reload(A)
+    assert A.DATA_DIR == (tmp_path / "cfg").resolve()
+    assert A.API_KEY_FILE == (tmp_path / "cfg").resolve() / "api-key"
+    monkeypatch.delenv("GRANOLA_ROUTER_HOME")
+    importlib.reload(A)
+    assert "granola" in str(A.DATA_DIR)

@@ -24,11 +24,21 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://public-api.granola.ai/v1"
 def _data_dir() -> Path:
-    """Config location, preferring ~/.granola-router.
+    """Config location.
 
-    Falls back to ~/.granola-saver when that exists and the new directory does
-    not, so an install predating the rename keeps working untouched.
+    `GRANOLA_ROUTER_HOME` overrides everything, which is how you run a second
+    configuration without disturbing the first: a demo pointed at a scratch
+    folder, a dry run against a different routing map, or a test that must not
+    touch real state.
+
+    Otherwise ~/.granola-router, falling back to ~/.granola-saver when that
+    exists and the new directory does not, so an install predating the rename
+    keeps working untouched.
     """
+    env = os.environ.get("GRANOLA_ROUTER_HOME")
+    if env and env.strip():
+        return Path(env).expanduser().resolve()
+
     new = Path.home() / ".granola-router"
     legacy = Path.home() / ".granola-saver"
     if not new.exists() and legacy.exists():
