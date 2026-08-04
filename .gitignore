@@ -16,7 +16,7 @@ api-key
 
 # Build output: the binary is large and rebuildable from build-extension.sh
 .venv-build/
-extension/granola-router-mcp
+extension/granola-organizer-mcp
 *.mcpb
 !landing/.gitkeep
-granola-router-mcp.spec
+granola-organizer-mcp.spec

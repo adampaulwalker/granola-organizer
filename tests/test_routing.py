@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from granola_router.api import Meeting, note_to_meeting
-from granola_router.routing import Outcome, Router
-from granola_router.writer import (
+from granola_organizer.api import Meeting, note_to_meeting
+from granola_organizer.routing import Outcome, Router
+from granola_organizer.writer import (
     content_hash,
     filename_for,
     render,
@@ -238,7 +238,7 @@ def test_write_atomic_creates_dirs_and_overwrites(tmp_path):
 # -- collision handling ----------------------------------------------------
 
 def test_same_meeting_reuses_its_own_file(tmp_path):
-    from granola_router.writer import resolve_path
+    from granola_organizer.writer import resolve_path
     m = _meeting()
     p1 = resolve_path(tmp_path, m)
     write_atomic(p1, render(m))
@@ -248,7 +248,7 @@ def test_same_meeting_reuses_its_own_file(tmp_path):
 
 def test_different_meeting_same_date_and_title_gets_its_own_file(tmp_path):
     """Two distinct notes sharing a date+title must not clobber each other."""
-    from granola_router.writer import resolve_path
+    from granola_organizer.writer import resolve_path
     a = _meeting(id="not_AAAAAA1111")
     b = _meeting(id="not_BBBBBB2222")
     pa = resolve_path(tmp_path, a)
@@ -262,7 +262,7 @@ def test_different_meeting_same_date_and_title_gets_its_own_file(tmp_path):
 
 
 def test_collision_suffix_is_stable_across_runs(tmp_path):
-    from granola_router.writer import resolve_path
+    from granola_organizer.writer import resolve_path
     a, b = _meeting(id="not_AAAAAA1111"), _meeting(id="not_BBBBBB2222")
     write_atomic(resolve_path(tmp_path, a), render(a))
     first = resolve_path(tmp_path, b)

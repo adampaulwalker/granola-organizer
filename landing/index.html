@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>granola-router - your Granola meetings, filed by client</title>
+<title>granola-organizer - your Granola meetings, filed by client</title>
 <meta name="description" content="Saves your Granola meeting transcripts as markdown and files each one into the right client folder. Free and open source. Requires a Granola Business plan.">
-<meta property="og:title" content="granola-router">
+<meta property="og:title" content="granola-organizer">
 <meta property="og:description" content="Your Granola meetings, filed into the right client folder, automatically.">
 <meta property="og:type" content="website">
 <style>
@@ -68,12 +68,12 @@
 
 <header>
   <h1>Your meetings, filed into the right client folder</h1>
-  <p class="lede">granola-router saves every Granola transcript as a markdown file
+  <p class="lede">granola-organizer saves every Granola transcript as a markdown file
   and puts it where it belongs, on its own. Then you can ask Claude about any call
   you have ever had.</p>
-  <a class="btn" href="./granola-router.mcpb" download>
+  <a class="btn" href="./granola-organizer.mcpb" download>
     Download for Claude Desktop
-    <span class="btn-sub">granola-router.mcpb &middot; 20 MB &middot; macOS</span>
+    <span class="btn-sub">granola-organizer.mcpb &middot; 20 MB &middot; macOS</span>
   </a>
 </header>
 
@@ -113,12 +113,12 @@ doing anything, because the meeting had someone from that company on the invite.
 <div class="card">
   <h3>Claude Desktop, no terminal</h3>
   <div class="step"><div class="num">1</div><div>
-    <p><a href="./granola-router.mcpb" download>Download the extension</a> and
+    <p><a href="./granola-organizer.mcpb" download>Download the extension</a> and
     double-click it. Claude Desktop installs it.</p></div></div>
   <div class="step"><div class="num">2</div><div>
     <p>In Granola: <strong>Settings &rarr; Connectors &rarr; API keys</strong>,
     create a key, and save it to a file called <code>api-key</code> inside a
-    folder named <code>.granola-router</code> in your home directory.</p></div></div>
+    folder named <code>.granola-organizer</code> in your home directory.</p></div></div>
   <div class="step"><div class="num">3</div><div>
     <p>Ask Claude: <em>"turn on always-on saving."</em> That sets up the
     background job. From then on your meetings file themselves, whether or not
@@ -131,22 +131,22 @@ doing anything, because the meeting had someone from that company on the invite.
 
 <div class="card">
   <h3>Claude Code or Cowork, one command</h3>
-  <pre><code>uv tool install git+https://github.com/adampaulwalker/granola-router</code></pre>
+  <pre><code>uv tool install git+https://github.com/adampaulwalker/granola-organizer</code></pre>
   <p>Then set it up:</p>
   <pre><code><span class="c"># save your Granola API key</span>
-mkdir -p ~/.granola-router
-echo 'grn_your_key_here' > ~/.granola-router/api-key
-chmod 600 ~/.granola-router/api-key
+mkdir -p ~/.granola-organizer
+echo 'grn_your_key_here' > ~/.granola-organizer/api-key
+chmod 600 ~/.granola-organizer/api-key
 
 <span class="c"># choose where transcripts go</span>
-echo '{"transcript_folder": "~/Documents/Meetings"}' > ~/.granola-router/settings.json
+echo '{"transcript_folder": "~/Documents/Meetings"}' > ~/.granola-organizer/settings.json
 
 <span class="c"># pull your history, then turn on automatic filing</span>
-granola-router backfill --dry-run   <span class="c"># preview, writes nothing</span>
-granola-router backfill
-granola-router install</code></pre>
-  <p><code>granola-router status</code> tells you whether automatic filing is on,
-  and <code>granola-router uninstall</code> turns it off again.</p>
+granola-organizer backfill --dry-run   <span class="c"># preview, writes nothing</span>
+granola-organizer backfill
+granola-organizer install</code></pre>
+  <p><code>granola-organizer status</code> tells you whether automatic filing is on,
+  and <code>granola-organizer uninstall</code> turns it off again.</p>
 </div>
 
 <h2>How it decides where a meeting goes</h2>
@@ -205,7 +205,7 @@ log in. Claude is only involved when you want to ask about a meeting.</p></detai
 the API will return the meeting.</p></details>
 
 <details><summary>How do I turn it off?</summary>
-<p><code>granola-router uninstall</code>, or ask Claude to turn off always-on
+<p><code>granola-organizer uninstall</code>, or ask Claude to turn off always-on
 saving. Transcripts already saved stay where they are. Note that removing the
 Desktop extension does <em>not</em> stop the background job, since the job runs
 independently of Claude.</p></details>
@@ -217,7 +217,7 @@ no third-party dependencies.</p></details>
 
 <details><summary>Can I use it on Windows or Linux?</summary>
 <p>The command-line tool runs anywhere Python does. Automatic filing currently
-uses macOS launchd; on Linux, run <code>granola-router poll --interval 120</code>
+uses macOS launchd; on Linux, run <code>granola-organizer poll --interval 120</code>
 from a systemd user service. The Desktop extension is macOS only for now.</p></details>
 
 <details><summary>What if I already used granola-saver?</summary>
@@ -227,7 +227,7 @@ folder if it finds one.</p></details>
 
 <footer>
   <p>Free and open source, MIT licensed.
-  <a href="https://github.com/adampaulwalker/granola-router">Source on GitHub</a>
+  <a href="https://github.com/adampaulwalker/granola-organizer">Source on GitHub</a>
   &middot; Built by <a href="https://atlanticlabs.ai">Adam Walker</a></p>
   <p>Not affiliated with Granola.</p>
 </footer>
