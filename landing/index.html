@@ -124,19 +124,9 @@ doing anything, because the meeting had someone from that company on the invite.
     background job. From then on your meetings file themselves, whether or not
     Claude is open.</p></div></div>
 
-  <div class="note" style="margin:18px 0 0">
-    <p><strong>Clear one flag before you install.</strong> The extension is not
-    signed with an Apple developer certificate yet, so macOS marks it as
-    downloaded from the web and then refuses to run it. It does this silently:
-    there is no warning dialog, the extension simply never starts.</p>
-    <p style="margin-top:10px">Run this on the downloaded file <em>before</em>
-    double-clicking it. The mark is copied into the installed files, so doing it
-    afterwards is too late:</p>
-    <pre style="margin:10px 0 0"><code>xattr -d com.apple.quarantine ~/Downloads/granola-router.mcpb</code></pre>
-    <p style="margin-top:10px">If you already installed it and nothing happens,
-    run that on the download and install it again. Installing from the command
-    line instead is not affected by any of this.</p>
-  </div>
+  <p style="margin-top:18px;color:var(--muted);font-size:.93rem">
+    Signed and notarized with Apple, so it just opens. No terminal, no
+    security warning to click through.</p>
 </div>
 
 <div class="card">
