@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements for the PyInstaller-packaged binary.
+
+  A PyInstaller "onefile" build extracts an embedded Python runtime and its
+  shared libraries to a temp directory at startup, then executes them. The
+  hardened runtime, which notarization requires, blocks both by default: the
+  binary signs cleanly and then dies the moment it runs.
+
+  Two entitlements, and no more than two.
+
+  allow-unsigned-executable-memory - the extracted interpreter maps executable
+    pages Apple did not sign.
+  disable-library-validation - the extracted .so/.dylib files are not signed by
+    the same team as the host binary, which library validation would refuse.
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>
