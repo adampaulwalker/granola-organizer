@@ -65,6 +65,27 @@ def running_frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 
 
+# Attributes that make a copied binary unlaunchable. Removing them from our own
+# already-validated executable is safe: the signature lives inside the file, so
+# Gatekeeper still verifies it on first run.
+_BLOCKING_XATTRS = ("com.apple.quarantine", "com.apple.provenance")
+
+
+def _strip_xattrs(path: Path) -> None:
+    """Clear extended attributes from a staged copy.
+
+    Deliberately shells out. os.removexattr and friends are Linux-only in
+    CPython, so the obvious implementation is a silent no-op on the one
+    platform where this matters. Caught by a test, not by reading the docs.
+    """
+    if sys.platform != "darwin":
+        return
+    try:
+        subprocess.run(["xattr", "-c", str(path)], capture_output=True, timeout=10)
+    except Exception:
+        pass
+
+
 # -- daemon heartbeat --------------------------------------------------------
 
 def read_health() -> Dict[str, Any]:
@@ -158,7 +179,13 @@ def install_stable_binary(source: Optional[Path] = None) -> Dict[str, Any]:
     if not target.exists():
         target_dir.mkdir(parents=True, exist_ok=True)
         tmp = target_dir / (BIN_NAME + ".partial")
-        shutil.copy2(src, tmp)
+        # copyfile, not copy2. copy2 also copies extended attributes, and a
+        # binary carrying com.apple.provenance (or com.apple.quarantine) hangs
+        # indefinitely on launch from its new path while macOS evaluates it -
+        # measured: identical bytes run in one second without those attributes
+        # and never start with them. launchd would just sit there.
+        shutil.copyfile(src, tmp)
+        _strip_xattrs(tmp)
         os.chmod(tmp, 0o755)
         os.replace(tmp, target)
         upgraded = True
