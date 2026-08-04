@@ -629,3 +629,38 @@ def test_failed_bootstrap_leaves_no_plist(tmp_path, monkeypatch):
     r = service.install_launch_agent(interval=120)
     assert r["ok"] is False
     assert not (tmp_path / "p.plist").exists()
+
+
+def test_staged_binary_carries_no_blocking_xattrs(tmp_path, monkeypatch):
+    """shutil.copy2 copies extended attributes, and a binary carrying
+    com.apple.provenance or com.apple.quarantine hangs on launch from its new
+    path. Measured: identical bytes run in a second without them and never
+    start with them, so launchd just sits there filing nothing."""
+    import sys as S
+    from granola_router import service
+    if S.platform != "darwin":
+        pytest.skip("extended attributes are a macOS concern")
+    monkeypatch.setattr(service, "BIN_ROOT", tmp_path / "s")
+    monkeypatch.setattr(service, "VERSIONS", tmp_path / "s" / "versions")
+    monkeypatch.setattr(service, "CURRENT", tmp_path / "s" / "current")
+    monkeypatch.setattr(service, "running_frozen", lambda: True)
+
+    src = tmp_path / "src-binary"
+    src.write_bytes(b"#!/bin/sh\nexit 0\n")
+    # os.setxattr/listxattr are Linux-only in CPython, hence the shelling out.
+    subprocess.run(["xattr", "-w", "com.apple.quarantine", "0083;0;Safari;t", str(src)],
+                   check=True)
+    def attrs_of(p):
+        r = subprocess.run(["xattr", str(p)], capture_output=True, text=True)
+        return [a for a in r.stdout.split() if a]
+    assert "com.apple.quarantine" in attrs_of(src)
+
+    monkeypatch.setattr(service.sys, "executable", str(src))
+    r = service.install_stable_binary()
+    assert r["stable"]
+
+    staged = tmp_path / "s" / "current" / "granola-router"
+    attrs = attrs_of(staged)
+    assert "com.apple.quarantine" not in attrs, f"staged copy still quarantined: {attrs}"
+    assert "com.apple.provenance" not in attrs, f"staged copy carries provenance: {attrs}"
+    assert staged.read_bytes() == src.read_bytes(), "content must be identical"
