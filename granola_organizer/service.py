@@ -75,19 +75,32 @@ def running_frozen() -> bool:
 _BLOCKING_XATTRS = ("com.apple.quarantine", "com.apple.provenance")
 
 
-def _strip_xattrs(path: Path) -> None:
-    """Clear extended attributes from a staged copy.
+def _strip_xattrs(path: Path) -> Dict[str, Any]:
+    """Try to clear extended attributes from a staged copy. Best effort only.
 
-    Deliberately shells out. os.removexattr and friends are Linux-only in
-    CPython, so the obvious implementation is a silent no-op on the one
-    platform where this matters. Caught by a test, not by reading the docs.
+    Two things measured here, both worth stating plainly because they defeat
+    the obvious implementation:
+
+    - os.removexattr and its siblings are Linux-only in CPython, so the
+      natural version of this function is a silent no-op on macOS.
+    - `xattr -c` does not remove com.apple.provenance, and macOS re-applies
+      com.apple.quarantine to a copy of a quarantined file regardless of
+      whether the copy was made with copyfile or copy2.
+
+    So this cannot be relied on, and nothing downstream should assume the
+    staged binary is attribute-free. What actually makes the staged copy
+    runnable is notarization; a quarantined copy of an unnotarized binary is
+    killed no matter how it was written. This returns what is left so callers
+    can report it rather than guess.
     """
     if sys.platform != "darwin":
-        return
+        return {"stripped": False, "remaining": []}
     try:
         subprocess.run(["xattr", "-c", str(path)], capture_output=True, timeout=10)
+        r = subprocess.run(["xattr", str(path)], capture_output=True, text=True, timeout=10)
+        return {"stripped": True, "remaining": [a for a in r.stdout.split() if a]}
     except Exception:
-        pass
+        return {"stripped": False, "remaining": []}
 
 
 # -- daemon heartbeat --------------------------------------------------------
@@ -322,7 +335,12 @@ def _bootstrap() -> subprocess.CompletedProcess:
     return r
 
 
-def _wait_for_job(seconds: float = 45.0, since: Optional[float] = None,
+# A staged copy is a file macOS has not seen before, so its first launch
+# triggers an online Gatekeeper check. Measured at 11-18s locally and slower on
+# a cold lookup, against a poll cycle that then takes time of its own. The wait
+# is generous because the alternative is telling someone their install failed
+# when it was only slow.
+def _wait_for_job(seconds: float = 150.0, since: Optional[float] = None,
                   generation: Optional[str] = None) -> Dict[str, Any]:
     """Wait until the daemon proves it is really filing, or give up.
 

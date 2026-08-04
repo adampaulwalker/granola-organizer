@@ -1,18 +1,18 @@
 {
   "manifest_version": "0.2",
-  "name": "granola-router",
+  "name": "granola-organizer",
   "display_name": "Granola Router",
   "version": "1.0.0",
   "description": "Saves your Granola meeting transcripts as markdown and files each one into the right client folder. Ask Claude about any past call. Requires a Granola Business plan.",
   "long_description": "Every meeting becomes a markdown file with the full transcript, filed into a folder chosen from the attendees and the title. Turn on always-on saving and it keeps filing in the background, with Claude closed. Uses Granola's official API, so it does not break when the app updates.",
   "author": { "name": "Adam Walker" },
-  "homepage": "https://github.com/adampaulwalker/granola-router",
-  "documentation": "https://github.com/adampaulwalker/granola-router#readme",
+  "homepage": "https://github.com/adampaulwalker/granola-organizer",
+  "documentation": "https://github.com/adampaulwalker/granola-organizer#readme",
   "server": {
     "type": "binary",
-    "entry_point": "granola-router-mcp",
+    "entry_point": "granola-organizer-mcp",
     "mcp_config": {
-      "command": "${__dirname}/granola-router-mcp",
+      "command": "${__dirname}/granola-organizer-mcp",
       "args": [],
       "env": {}
     }
