@@ -44,8 +44,20 @@ def cmd_poll(args: argparse.Namespace) -> int:
             print(stats.render())
         return 0
 
-    logging.info("polling every %ds", args.interval)
+    # A daemon that sleeps for a negative interval crashes outside the loop's
+    # own try, and one that spins with no delay hammers the API.
+    interval = max(30, min(int(args.interval), 3600))
+    if interval != args.interval:
+        logging.warning("interval %s is out of range; using %ds", args.interval, interval)
+
+    logging.info("polling every %ds", interval)
+    # The heartbeat is how `status` tells a healthy idle daemon apart from one
+    # launchd loaded and that then died quietly. Without it, the only evidence
+    # of life is the log file, which nothing reads.
+    service.daemon_started(interval)
+    failures = 0
     while True:
+        service.write_health(last_tick_started=time.time())
         try:
             with ProcessLock():
                 stats = Syncer(dry_run=args.dry_run).poll_once()
@@ -53,13 +65,28 @@ def cmd_poll(args: argparse.Namespace) -> int:
                     logging.info("%s", stats.render())
                 else:
                     logging.debug("%s", stats.render())
+            failures = 0
+            service.write_health(last_tick_finished=time.time(),
+                                 last_success=time.time(),
+                                 last_stats=stats.render(),
+                                 last_error=None,
+                                 consecutive_failures=0)
         except LockHeld as exc:
+            # Another process holds the lock. Not a failure: the work is being
+            # done, just not by this tick.
             logging.info("%s", exc)
+            service.write_health(last_tick_finished=time.time())
         except GranolaAPIError as exc:
+            failures += 1
             logging.error("%s", exc)
-        except Exception:
+            service.write_health(last_tick_finished=time.time(), last_error=str(exc),
+                                 last_error_at=time.time(), consecutive_failures=failures)
+        except Exception as exc:
+            failures += 1
             logging.exception("poll failed")
-        time.sleep(args.interval)
+            service.write_health(last_tick_finished=time.time(), last_error=str(exc),
+                                 last_error_at=time.time(), consecutive_failures=failures)
+        time.sleep(interval)
 
 
 def cmd_install(args: argparse.Namespace) -> int:
@@ -99,16 +126,15 @@ def cmd_status(_: argparse.Namespace) -> int:
         if rec.get("outcome"):
             outcomes[rec["outcome"]] = outcomes.get(rec["outcome"], 0) + 1
 
+    # Shared with the MCP server so the two cannot describe the same machine
+    # differently.
     ag = service.launch_agent_state()
-    if ag["broken"]:
-        label = "BROKEN - points at a missing binary; run granola-router install"
-    elif ag["running"]:
-        label = "ON - checks every couple of minutes, with or without Claude open"
-    elif ag["installed"]:
-        label = "INSTALLED BUT NOT RUNNING - run granola-router install"
-    else:
-        label = "OFF - run granola-router install to turn it on"
-    print(f"automatic filing: {label}")
+    verdict = service.filing_status(ag)
+    print(f"automatic filing: {verdict['status'].upper().replace('_', ' ')}")
+    print(f"                  {verdict['reason']}")
+    if ag.get("pid"):
+        print(f"                  pid {ag['pid']}, last check "
+              f"{ag.get('heartbeat_age_seconds', '?')}s ago")
     print(f"transcript root : {transcript_root()}")
     print(f"state file      : {STATE_FILE}")
     print(f"last watermark  : {state.get('watermark') or 'never'}")
