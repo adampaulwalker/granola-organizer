@@ -120,10 +120,17 @@ xcrun notarytool submit "$BUNDLE" --keychain-profile "$KEYCHAIN_PROFILE" --wait
 # propagation delay, but do eventually fail, because a check that cannot fail
 # is worthless.
 
+#
+# Three attempts, not twelve. Every failed attempt is Gatekeeper refusing a
+# quarantined binary, and each refusal puts a dialog on the user's screen. A
+# retry loop that looks harmless in a log is a dozen popups to whoever is
+# sitting at the machine.
+
 echo "==> verifying as a downloaded copy would behave"
+echo "    (a failed attempt shows a macOS security dialog; there are at most 3)"
 T="$(mktemp -d)"
 PASSED=0
-for attempt in $(seq 1 12); do
+for attempt in $(seq 1 3); do
   rm -rf "${T:?}/x" "$T/home"
   cp "$BUNDLE" "$T/t.mcpb"
   xattr -w com.apple.quarantine "0083;0;Safari;$(uuidgen)" "$T/t.mcpb"
@@ -134,11 +141,11 @@ for attempt in $(seq 1 12); do
     break
   fi
   echo "    not yet accepted, waiting for the ticket to propagate (${attempt}/12)"
-  sleep 10
+  sleep 40
 done
 rm -rf "$T"
 if [ "$PASSED" -ne 1 ]; then
-  echo "FAIL: a quarantined copy is still killed two minutes after notarization." >&2
+  echo "FAIL: a quarantined copy is still killed after notarization." >&2
   echo "      Exit 137 means Gatekeeper refused it. Check the entitlements and" >&2
   echo "      that the submission really returned Accepted." >&2
   exit 1

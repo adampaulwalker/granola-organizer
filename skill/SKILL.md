@@ -13,8 +13,13 @@ one filed into a client folder chosen from the attendees and the title.
 This ships in two places with different capabilities. Check before doing anything.
 
 **If `granola_*` MCP tools are available** (Claude Desktop extension), use only
-those. There is no shell and no `granola-organizer` command. Never suggest
-installing a command-line tool unless the person asks for it.
+those, even when a shell is also available. Do not inspect the filesystem, read
+log files, list launch agents, or read config by hand to cross-check what a
+tool told you. The tools already report the machine's state, and going around
+them reads private meeting content and unrelated config that was never asked
+for. A measured run did exactly that: ten shell commands through someone's real
+transcripts and caches, to answer a question the first tool call had already
+answered. Never suggest installing a command-line tool unless the person asks.
 
 **If Bash is available and `granola-organizer` runs**, use the command line.
 
@@ -60,6 +65,38 @@ turning it on is a one-off:
 Removing the Claude Desktop extension does **not** stop the background job,
 because the job is deliberately independent of Claude. Turn it off first, or run
 `granola-organizer uninstall` from a terminal afterwards.
+
+### Never say filing is working unless status says so
+
+`automatic_filing` reports one of six values. Only one of them means meetings
+are being filed. Report the one you were given, never a friendlier neighbour.
+
+| Value | What is true | What to say |
+|---|---|---|
+| `on` | A live process is filing, heartbeat is fresh | Filing is on and working |
+| `starting` | It just launched, no check finished yet | It has started; check again in a minute |
+| `installed_not_running` | Set up, but nothing is running | It is installed but not running; turn it on again |
+| `failed` | Loaded or running, but not filing | It is not filing, and say why from `automatic_filing_detail` |
+| `broken` | Points at a missing binary or the wrong config folder | It needs turning on again to repair itself |
+| `off` | Never turned on | It is off |
+
+`automatic_filing_detail` carries the reason in plain words. Pass it through
+rather than paraphrasing it into something reassuring.
+
+An earlier version of this tool reported `on` while the background job started,
+exited immediately, and filed nothing for its entire life. Everything above
+exists so that cannot be described as working again.
+
+`granola_enable_always_on` has three outcomes, and two of them are not success:
+
+- `ok: false` - it did not start, nothing is being filed, and the launch agent
+  has been removed again. Give the `error` verbatim. Do not retry silently.
+- `ok: true` with `pending_first_check: true` - it is running but has not
+  finished a first pass. Say it has started and has not filed anything yet.
+- `ok: true` without that flag - it started and completed a check.
+
+The first start is slower than it looks, because macOS inspects a binary it has
+not seen before. Slow is not failed.
 
 A meeting appears a few minutes after the call, not immediately. Granola has to
 finish writing its summary before the API will return it. If something is
@@ -125,3 +162,15 @@ Never report a meeting as filed unless a tool result says so.
 If asked where to keep transcripts: any folder works. A folder inside Dropbox,
 Google Drive, Box or OneDrive syncs, and Claude Code and Cowork read local files
 directly. Claude in the browser cannot reach the filesystem.
+
+## Output discipline
+
+One tool call usually answers the question. Make it, then answer.
+
+Do not narrate the steps, do not explain which interface you detected, and do
+not keep investigating after you have the answer. If `granola_status` says
+filing is off, the answer is that filing is off and how to turn it on - not a
+survey of the machine.
+
+Stop when you can answer. Confidence about the daemon comes from the tool
+result, not from corroborating it against logs and processes.

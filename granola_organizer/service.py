@@ -29,11 +29,20 @@ from typing import Any, Dict, List, Optional
 from .api import DATA_DIR
 
 LABEL = "com.granola-organizer.poll"
-# Labels this tool used before it was renamed. An agent left behind under an old
-# label keeps polling forever, invisible to a status command that only looks for
-# the current one, and two daemons filing the same meetings fight over the files.
-LEGACY_LABELS = ("com.granola-router.poll", "com.granola-saver.poll")
-PLIST_PATH = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
+# The label this tool used before it was renamed. An agent left behind under the
+# old label keeps polling forever, is invisible to a status command that only
+# looks for the current one, and two daemons filing the same meetings overwrite
+# each other every cycle.
+#
+# Deliberately NOT including com.granola-saver.poll. That is a different tool
+# that people may still be running on purpose, and this one has no business
+# deciding otherwise. Guessing wrong there cost a working install: an earlier
+# version deleted that agent, and because the deletion happened through the
+# filesystem rather than through the mocked subprocess layer, it fired from the
+# test suite against a real home directory.
+LEGACY_LABELS = ("com.granola-router.poll",)
+LAUNCH_AGENTS_DIR = Path.home() / "Library" / "LaunchAgents"
+PLIST_PATH = LAUNCH_AGENTS_DIR / f"{LABEL}.plist"
 LOG_DIR = Path.home() / "Library" / "Logs" / "granola-organizer"
 
 # The daemon must not run the binary inside Claude's extension folder: removing
@@ -301,29 +310,28 @@ def _bootout() -> None:
         _run("launchctl", "unload", str(PLIST_PATH))
 
 
-def retire_legacy_agents() -> List[str]:
-    """Stop and remove launch agents this tool installed under earlier names.
+def detect_legacy_agents() -> List[Dict[str, Any]]:
+    """Report launch agents left behind under this tool's previous label.
 
-    Without this a rename leaves the previous daemon running forever. It does
-    not appear in status, which only knows the current label, and two pollers
-    writing the same meetings overwrite each other's files on every cycle -
-    observed, not hypothetical.
+    Reports; does not remove. Deleting a launch agent is not a side effect to
+    take on someone's behalf, and an earlier version that did it removed a
+    different tool's working daemon from a test run. Anything destructive here
+    has to be the person's explicit choice, so this returns what it found and
+    the caller surfaces it.
     """
-    retired: List[str] = []
+    found: List[Dict[str, Any]] = []
     for label in LEGACY_LABELS:
-        plist = Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
+        plist = LAUNCH_AGENTS_DIR / f"{label}.plist"
         loaded = _run("launchctl", "list", label).returncode == 0
-        if not plist.exists() and not loaded:
-            continue
-        _run("launchctl", "bootout", f"{_domain()}/{label}")
-        if plist.exists():
-            _run("launchctl", "unload", str(plist))
-            try:
-                plist.unlink()
-            except OSError:
-                continue
-        retired.append(label)
-    return retired
+        if plist.exists() or loaded:
+            found.append({
+                "label": label,
+                "loaded": loaded,
+                "plist": str(plist),
+                "how_to_remove": f"launchctl bootout gui/{os.getuid()}/{label} "
+                                 f"&& rm {plist}",
+            })
+    return found
 
 
 def _bootstrap() -> subprocess.CompletedProcess:
@@ -559,7 +567,7 @@ def install_launch_agent(interval: int = 120,
     os.replace(tmp, PLIST_PATH)
 
     _bootout()
-    retired = retire_legacy_agents()
+    legacy = detect_legacy_agents()
 
     # Clear the old heartbeat before starting. A previous daemon's record would
     # otherwise make a newly installed, immediately dying binary look healthy -
@@ -612,7 +620,7 @@ def install_launch_agent(interval: int = 120,
 
     return {"ok": True, "interval": interval, "upgraded": stable.get("upgraded", False),
             "binary": stable.get("path"), "pid": job.get("PID"),
-            "retired_legacy_agents": retired,
+            "legacy_agents_found": legacy,
             "state": launch_agent_state()}
 
 

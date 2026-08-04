@@ -670,27 +670,30 @@ def test_staged_binary_carries_no_blocking_xattrs(tmp_path, monkeypatch):
     assert oct(staged.stat().st_mode)[-3:] == "755", "staged binary must be executable"
 
 
-def test_legacy_launch_agents_are_retired_on_install(tmp_path, monkeypatch):
-    """This tool has been renamed twice. An agent left under an old label keeps
-    polling forever, is invisible to a status command that only knows the
-    current label, and two pollers overwrite each other's files every cycle."""
+def test_legacy_agents_are_reported_never_deleted(tmp_path, monkeypatch):
+    """Detect and report. Never remove.
+
+    An earlier version deleted old launch-agent plists, and because it did that
+    through the filesystem rather than the mocked subprocess layer, it fired
+    from the test suite against the real home directory and killed a different
+    tool's working daemon. Removing someone's launch agent is their decision.
+    """
     from granola_organizer import service
-    home = tmp_path / "home"
-    (home / "Library" / "LaunchAgents").mkdir(parents=True)
-    monkeypatch.setattr(service.Path, "home", staticmethod(lambda: home))
-    stale = home / "Library" / "LaunchAgents" / "com.granola-router.poll.plist"
+    agents = tmp_path / "LaunchAgents"
+    agents.mkdir()
+    monkeypatch.setattr(service, "LAUNCH_AGENTS_DIR", agents)
+    stale = agents / "com.granola-router.poll.plist"
     stale.write_text("<plist/>")
+    monkeypatch.setattr(service, "_run",
+                        lambda *a: subprocess.CompletedProcess(list(a), 1, "", ""))
 
-    calls = []
-    def fake_run(*args):
-        calls.append(args)
-        import subprocess as sp
-        # `launchctl list <label>` returning 0 means the job is loaded.
-        rc = 0 if args[:2] == ("launchctl", "list") else 0
-        return sp.CompletedProcess(list(args), rc, "", "")
-    monkeypatch.setattr(service, "_run", fake_run)
+    found = service.detect_legacy_agents()
+    assert [f["label"] for f in found] == ["com.granola-router.poll"]
+    assert stale.exists(), "detection must never delete anything"
+    assert "how_to_remove" in found[0], "must tell the person how to remove it themselves"
 
-    retired = service.retire_legacy_agents()
-    assert "com.granola-router.poll" in retired
-    assert not stale.exists(), "the stale plist must be removed, not just unloaded"
-    assert any("bootout" in a for c in calls for a in c), "must stop the running job too"
+
+def test_a_different_tools_agent_is_left_alone(tmp_path, monkeypatch):
+    """granola-saver is a separate tool people may still run on purpose."""
+    from granola_organizer import service
+    assert "com.granola-saver.poll" not in service.LEGACY_LABELS
