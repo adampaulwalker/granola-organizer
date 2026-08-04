@@ -1,21 +1,21 @@
-# Verification prompt for granola-router
+# Verification prompt for granola-organizer
 
 Paste this into a fresh session.
 
 ---
 
-granola-router shipped today and is publicly downloadable, but several claims on
+granola-organizer shipped today and is publicly downloadable, but several claims on
 the landing page have never been executed. Read
-`~/.claude/projects/-Users-adam-Library-CloudStorage-Dropbox-Atlantic-Labs/memory/granola_router_state.md`
+`~/.claude/projects/-Users-adam-Library-CloudStorage-Dropbox-Atlantic-Labs/memory/granola_organizer_state.md`
 first, then close the gaps below in order. Stop and report if any step fails
 rather than working around it.
 
-Repo: `~/code/granola-router`. Site source: `~/code/atlantic-labs-ai`.
-Page: https://atlanticlabs.ai/granola-router/
+Repo: `~/code/granola-organizer`. Site source: `~/code/atlantic-labs-ai`.
+Page: https://atlanticlabs.ai/granola-organizer/
 
 Before touching anything, protect the live setup: Adam's real config is
 `~/.granola-saver/` and his real transcripts are in Dropbox. Use
-`GRANOLA_ROUTER_HOME` to point at a scratch config for every test. Never run
+`GRANOLA_ORGANIZER_HOME` to point at a scratch config for every test. Never run
 `granola_sync_now` or `backfill` against the real config while testing - a
 previous run pulled 16 real client meetings into a demo folder.
 
@@ -23,7 +23,7 @@ previous run pulled 16 real client meetings into a demo folder.
 
 This is the headline claim and nobody has ever done it.
 
-Download from https://atlanticlabs.ai/downloads/granola-router.mcpb using a
+Download from https://atlanticlabs.ai/downloads/granola-organizer.mcpb using a
 browser, so the file carries a real quarantine attribute. Then:
 
 - Does macOS block it? Capture the exact wording of the dialog.
@@ -38,11 +38,11 @@ If the Gatekeeper wording differs from what the page says, fix the page.
 
 `granola_enable_always_on` and `granola_disable_always_on` have only ever run
 against mocked `subprocess` calls. From Claude Desktop, with a scratch
-`GRANOLA_ROUTER_HOME`:
+`GRANOLA_ORGANIZER_HOME`:
 
-- Enable it. Confirm a launch agent named `com.granola-router.poll` exists and is
-  loaded (`launchctl list | grep granola-router`).
-- Confirm the binary it points at is under `~/.granola-router/bin/versions/<hash>/`
+- Enable it. Confirm a launch agent named `com.granola-organizer.poll` exists and is
+  loaded (`launchctl list | grep granola-organizer`).
+- Confirm the binary it points at is under `~/.granola-organizer/bin/versions/<hash>/`
   and NOT inside Claude's extension directory. This is the failure that killed
   the previous daemon.
 - Disable it. Confirm the agent is gone and saved files are untouched.
@@ -64,7 +64,7 @@ minutes" is wrong.
 ## 5. Reboot
 
 Adam's Mac has 53+ days uptime, so autostart is inferred, not observed. After a
-restart, `granola-router status` should report automatic filing ON with no
+restart, `granola-organizer status` should report automatic filing ON with no
 intervention.
 
 ## 6. Settle two open questions

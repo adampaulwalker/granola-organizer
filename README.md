@@ -1,4 +1,4 @@
-# granola-router
+# granola-organizer
 
 Saves your [Granola](https://www.granola.ai) meeting transcripts to markdown files on disk, and files each one into the right client folder automatically.
 
@@ -36,31 +36,31 @@ The file lands in a folder chosen from the meeting's attendees and title, so a c
 Not on PyPI yet, so install straight from this repository:
 
 ```bash
-uv tool install git+https://github.com/adampaulwalker/granola-router
+uv tool install git+https://github.com/adampaulwalker/granola-organizer
 ```
 
 or with pipx:
 
 ```bash
-pipx install git+https://github.com/adampaulwalker/granola-router
+pipx install git+https://github.com/adampaulwalker/granola-organizer
 ```
 
-Either one puts a `granola-router` command on your path. It has no third-party
-dependencies, so nothing else gets pulled in. `uv tool uninstall granola-router`
+Either one puts a `granola-organizer` command on your path. It has no third-party
+dependencies, so nothing else gets pulled in. `uv tool uninstall granola-organizer`
 removes it.
 
 Generate an API key in the Granola desktop app under **Settings → Connectors → API keys**, then:
 
 ```bash
-mkdir -p ~/.granola-router
-echo 'grn_your_key_here' > ~/.granola-router/api-key
-chmod 600 ~/.granola-router/api-key
+mkdir -p ~/.granola-organizer
+echo 'grn_your_key_here' > ~/.granola-organizer/api-key
+chmod 600 ~/.granola-organizer/api-key
 ```
 
 Point it at a destination and tell it which addresses are yours:
 
 ```json
-// ~/.granola-router/settings.json
+// ~/.granola-organizer/settings.json
 {
   "transcript_folder": "~/Documents/Meetings",
   "own_emails": ["you@example.com", "you@personal.example"],
@@ -71,8 +71,8 @@ Point it at a destination and tell it which addresses are yours:
 Then pull your history:
 
 ```bash
-granola-router backfill --dry-run   # see where everything would go
-granola-router backfill             # write it
+granola-organizer backfill --dry-run   # see where everything would go
+granola-organizer backfill             # write it
 ```
 
 ## Where to put the files
@@ -105,7 +105,7 @@ On the browser: claude.ai has connectors for Dropbox, Google Drive, Box and OneD
 
 `skill/SKILL.md` teaches Claude to drive the tool in plain language, so you can ask "what did we decide with Dana" instead of remembering subcommands.
 
-- **Claude Code:** copy the `skill/` folder into `~/.claude/skills/granola-router/`
+- **Claude Code:** copy the `skill/` folder into `~/.claude/skills/granola-organizer/`
 - **Cowork:** add the markdown skill to your Cowork project
 
 Triggers are conversational in both. Slash commands only exist in Claude Code.
@@ -120,7 +120,7 @@ Triggers are conversational in both. Slash commands only exist in Claude Code.
 
 ## Routing
 
-Copy `routing-map.example.json` to `~/.granola-router/routing-map.json`. Rules are checked in this order, and the first confident match wins:
+Copy `routing-map.example.json` to `~/.granola-organizer/routing-map.json`. Rules are checked in this order, and the first confident match wins:
 
 | Tier | Matches on | Use it for |
 |---|---|---|
@@ -129,7 +129,7 @@ Copy `routing-map.example.json` to `~/.granola-router/routing-map.json`. Rules a
 | `email_domains` | attendee email domain | the normal case |
 | `title_keywords` | title keyword | calls with no company domain on the invite |
 
-Anything that doesn't match confidently goes to a quarantine folder rather than a client folder. `granola-router status` lists what landed there and why, so you can add a rule.
+Anything that doesn't match confidently goes to a quarantine folder rather than a client folder. `granola-organizer status` lists what landed there and why, so you can add a rule.
 
 That matters more than it sounds. Roughly half of most people's meetings are one-to-ones with someone on a personal Gmail address, where nothing on the invite identifies a company. Guessing puts a client transcript in the wrong client's folder. Quarantining puts it somewhere visible.
 
@@ -138,10 +138,10 @@ Editing the routing map re-files existing transcripts on the next run. State rec
 ## Commands
 
 ```
-granola-router backfill [--since YYYY-MM-DD] [--limit N] [--dry-run]
-granola-router poll [--once] [--interval 120]
-granola-router status
-granola-router domains          # attendee domains with no rule yet
+granola-organizer backfill [--since YYYY-MM-DD] [--limit N] [--dry-run]
+granola-organizer poll [--once] [--interval 120]
+granola-organizer status
+granola-organizer domains          # attendee domains with no rule yet
 ```
 
 `domains` is the fastest way to build a routing map: run it, see which companies you actually meet, add the ones you care about.
@@ -149,8 +149,8 @@ granola-router domains          # attendee domains with no rule yet
 ## Running it continuously
 
 ```bash
-granola-router install     # automatic filing on
-granola-router uninstall   # off
+granola-organizer install     # automatic filing on
+granola-organizer uninstall   # off
 ```
 
 `install` registers a launch agent, so the tool starts on its own when you log in
@@ -158,11 +158,11 @@ and keeps running in the background. Claude does not need to be open for this;
 the filing is a plain background program with no connection to Claude at all.
 
 `uninstall` stops it and prevents it starting again. Files already saved stay
-where they are. You can still file on demand with `granola-router poll --once`.
+where they are. You can still file on demand with `granola-organizer poll --once`.
 
-`granola-router status` opens by telling you whether automatic filing is on.
+`granola-organizer status` opens by telling you whether automatic filing is on.
 
-macOS only for now. On Linux, run `granola-router poll --interval 120` from a
+macOS only for now. On Linux, run `granola-organizer poll --interval 120` from a
 systemd user service or a cron job.
 
 A meeting appears a few minutes after the call rather than immediately, because

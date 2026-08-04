@@ -1,9 +1,9 @@
 ---
-name: granola-router
+name: granola-organizer
 description: Save Granola meeting transcripts to markdown and file them into per-client folders. Use for finding what was said in a past meeting, checking whether meetings are being saved, turning automatic saving on or off, and diagnosing why a meeting was not filed. Triggers on "what did we decide in the call with", "where is the transcript from", "save my meetings", "sync my granola notes", "why is this meeting unrouted", "turn on automatic saving".
 ---
 
-# granola-router
+# granola-organizer
 
 Meeting transcripts are pulled from Granola's API and written as markdown, each
 one filed into a client folder chosen from the attendees and the title.
@@ -13,16 +13,16 @@ one filed into a client folder chosen from the attendees and the title.
 This ships in two places with different capabilities. Check before doing anything.
 
 **If `granola_*` MCP tools are available** (Claude Desktop extension), use only
-those. There is no shell and no `granola-router` command. Never suggest
+those. There is no shell and no `granola-organizer` command. Never suggest
 installing a command-line tool unless the person asks for it.
 
-**If Bash is available and `granola-router` runs**, use the command line.
+**If Bash is available and `granola-organizer` runs**, use the command line.
 
 **If neither**, say so plainly and stop. In a shell environment where the
 command is missing, the fix is one line:
 
 ```bash
-uv tool install git+https://github.com/adampaulwalker/granola-router
+uv tool install git+https://github.com/adampaulwalker/granola-organizer
 ```
 
 Do not go looking for a similar tool elsewhere on the machine. A confident
@@ -36,15 +36,15 @@ disk during what someone thought was a look around.
 | | Reads only | Writes files | Changes background filing |
 |---|---|---|---|
 | MCP | `granola_status`, `granola_list_meetings`, `granola_get_transcript`, `granola_search` | `granola_sync_now` | `granola_enable_always_on`, `granola_disable_always_on` |
-| CLI | `granola-router status`, `granola-router domains`, `granola-router backfill --dry-run` | `granola-router poll --once`, `granola-router backfill` | `granola-router install`, `granola-router uninstall` |
+| CLI | `granola-organizer status`, `granola-organizer domains`, `granola-organizer backfill --dry-run` | `granola-organizer poll --once`, `granola-organizer backfill` | `granola-organizer install`, `granola-organizer uninstall` |
 
 Never run anything in the right-hand columns while inspecting, diagnosing,
 searching, or setting up a demo. Only when the person has actually asked to
 sync, backfill, or change automatic filing.
 
-`granola_sync_now` and `granola-router backfill` reach Granola's API and write
+`granola_sync_now` and `granola-organizer backfill` reach Granola's API and write
 to disk. Say what will happen and where before running either. On the command
-line, offer `granola-router backfill --dry-run` first; the MCP tool has no
+line, offer `granola-organizer backfill --dry-run` first; the MCP tool has no
 preview, so ask instead.
 
 ## Who does the filing
@@ -54,12 +54,12 @@ system. Not this skill, and not Claude. It keeps filing with Claude closed, and
 turning it on is a one-off:
 
 - MCP: `granola_enable_always_on` / `granola_disable_always_on`
-- CLI: `granola-router install` / `granola-router uninstall`
-- Check the current state with `granola_status` or `granola-router status`, whichever you have
+- CLI: `granola-organizer install` / `granola-organizer uninstall`
+- Check the current state with `granola_status` or `granola-organizer status`, whichever you have
 
 Removing the Claude Desktop extension does **not** stop the background job,
 because the job is deliberately independent of Claude. Turn it off first, or run
-`granola-router uninstall` from a terminal afterwards.
+`granola-organizer uninstall` from a terminal afterwards.
 
 A meeting appears a few minutes after the call, not immediately. Granola has to
 finish writing its summary before the API will return it. If something is
@@ -71,7 +71,7 @@ missing, say that rather than reporting it as lost.
 `note_id` it returns. Do not pass a path or a URL; the id comes from
 `granola_search` or `granola_list_meetings`.
 
-**CLI:** the transcript folder is the `transcript_folder` value in `granola-router status`. Files are markdown,
+**CLI:** the transcript folder is the `transcript_folder` value in `granola-organizer status`. Files are markdown,
 so search them directly rather than calling the API.
 
 Each file carries front matter with the title, date, attendees and `granola_id`,
@@ -80,7 +80,7 @@ when asked what somebody said, rather than paraphrasing it.
 
 ## When a meeting was not filed
 
-Unfiled meetings sit in a quarantine folder. `granola_status` and `granola-router status` both list them with a reason:
+Unfiled meetings sit in a quarantine folder. `granola_status` and `granola-organizer status` both list them with a reason:
 
 | Reason | Meaning | What fixes it |
 |---|---|---|
@@ -105,14 +105,14 @@ rule can reach.
 
 **CLI:** read the map, confirm the client and folder with the person, then edit
 it. Editing changes configuration immediately but moves nothing on its own;
-files are re-filed by the next background run, or by `granola-router backfill`.
-Preview with `granola-router backfill --dry-run` before writing.
+files are re-filed by the next background run, or by `granola-organizer backfill`.
+Preview with `granola-organizer backfill --dry-run` before writing.
 
 **MCP:** there is no tool for editing rules. Work out which rule is needed and
 tell the person exactly what to add and where. Do not claim to have changed
 anything.
 
-`granola-router domains` lists attendee domains with no rule yet, which is the
+`granola-organizer domains` lists attendee domains with no rule yet, which is the
 quickest way to see what is worth adding. There is no MCP equivalent; from
 Desktop, infer it from `granola_list_meetings` and say that is what you did.
 

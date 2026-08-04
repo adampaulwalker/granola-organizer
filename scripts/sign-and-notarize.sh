@@ -13,8 +13,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUNDLE="$ROOT/granola-router.mcpb"
-BINARY="$ROOT/extension/granola-router-mcp"
+BUNDLE="$ROOT/granola-organizer.mcpb"
+BINARY="$ROOT/extension/granola-organizer-mcp"
 ENTITLEMENTS="$ROOT/scripts/pyinstaller.entitlements"
 KEYCHAIN_PROFILE="${NOTARY_PROFILE:-spotify-mcpb-notary}"
 
@@ -82,7 +82,7 @@ codesign --verify --strict --verbose=2 "$BINARY" 2>&1 | sed 's/^/    /'
 echo "==> checking the signed binary still runs"
 SMOKE_HOME="$(mktemp -d)"
 trap 'rm -rf "$SMOKE_HOME"' EXIT
-if ! GRANOLA_ROUTER_HOME="$SMOKE_HOME" "$BINARY" poll --help > /dev/null 2>&1; then
+if ! GRANOLA_ORGANIZER_HOME="$SMOKE_HOME" "$BINARY" poll --help > /dev/null 2>&1; then
   echo "FAIL: the signed binary will not run. Check the entitlements." >&2
   exit 1
 fi
@@ -128,7 +128,7 @@ for attempt in $(seq 1 12); do
   cp "$BUNDLE" "$T/t.mcpb"
   xattr -w com.apple.quarantine "0083;0;Safari;$(uuidgen)" "$T/t.mcpb"
   unzip -qo "$T/t.mcpb" -d "$T/x"
-  if GRANOLA_ROUTER_HOME="$T/home" "$T/x/granola-router-mcp" poll --help > /dev/null 2>&1; then
+  if GRANOLA_ORGANIZER_HOME="$T/home" "$T/x/granola-organizer-mcp" poll --help > /dev/null 2>&1; then
     echo "    PASS: runs under quarantine (after ${attempt}0s)"
     PASSED=1
     break

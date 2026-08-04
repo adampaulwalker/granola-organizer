@@ -9,10 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from granola_router import sync as S
-from granola_router.routing import Router
-from granola_router.writer import render, write_atomic
-from granola_router.api import Meeting
+from granola_organizer import sync as S
+from granola_organizer.routing import Router
+from granola_organizer.writer import render, write_atomic
+from granola_organizer.api import Meeting
 
 
 @pytest.fixture(autouse=True)
@@ -62,7 +62,7 @@ def test_lock_freed_when_holder_process_dies(isolate):
     lock = isolate / "sync.lock"
     code = (
         f"import sys; sys.path.insert(0,{str(Path.cwd())!r});"
-        "from granola_router import sync as S;"
+        "from granola_organizer import sync as S;"
         f"l=S.ProcessLock({str(lock)!r}); l.__enter__();"
         "import time; time.sleep(30)"
     )
@@ -155,7 +155,7 @@ def test_old_copy_claimed_by_another_state_record_is_kept(isolate, tmp_path):
 # -- skip logic ------------------------------------------------------------
 
 def test_file_matches_requires_real_content_not_just_existence(isolate, tmp_path):
-    from granola_router.writer import content_hash
+    from granola_organizer.writer import content_hash
     s = _syncer(tmp_path)
     p = s.root / "x.md"
     text = render(_meeting("not_abc123"))
@@ -176,7 +176,7 @@ def test_routing_version_changes_when_rules_change(isolate, tmp_path):
 
 def test_api_datetime_format_matches_what_the_api_accepts():
     """Verified live: +00:00 offsets and microseconds return HTTP 400."""
-    from granola_router.api import to_api_datetime
+    from granola_organizer.api import to_api_datetime
     assert to_api_datetime("2026-07-27T06:17:07.705031+00:00") == "2026-07-27T06:17:07Z"
     assert to_api_datetime("2026-07-27T06:17:07+00:00") == "2026-07-27T06:17:07Z"
     assert to_api_datetime("2026-07-27T06:17:07Z") == "2026-07-27T06:17:07Z"
@@ -219,7 +219,7 @@ def test_lock_waits_then_fails_with_actionable_message(isolate):
 
 def test_routing_version_covers_code_version_not_just_config(isolate, tmp_path, monkeypatch):
     """A logic change must invalidate the skip cache even if the map is identical."""
-    from granola_router import routing as R
+    from granola_organizer import routing as R
     rmap = {"email_domains": {"a.com": "A"}}
     before = _syncer(tmp_path, routing_map=rmap).routing_version
     monkeypatch.setattr(R, "ROUTING_LOGIC_VERSION", R.ROUTING_LOGIC_VERSION + 1)
@@ -229,14 +229,14 @@ def test_routing_version_covers_code_version_not_just_config(isolate, tmp_path, 
 
 
 def test_config_dir_honours_env_override(tmp_path, monkeypatch):
-    """GRANOLA_ROUTER_HOME lets a demo or a test run without touching real state."""
+    """GRANOLA_ORGANIZER_HOME lets a demo or a test run without touching real state."""
     import importlib
-    from granola_router import api as A
-    monkeypatch.setenv("GRANOLA_ROUTER_HOME", str(tmp_path / "cfg"))
+    from granola_organizer import api as A
+    monkeypatch.setenv("GRANOLA_ORGANIZER_HOME", str(tmp_path / "cfg"))
     importlib.reload(A)
     assert A.DATA_DIR == (tmp_path / "cfg").resolve()
     assert A.API_KEY_FILE == (tmp_path / "cfg").resolve() / "api-key"
-    monkeypatch.delenv("GRANOLA_ROUTER_HOME")
+    monkeypatch.delenv("GRANOLA_ORGANIZER_HOME")
     importlib.reload(A)
     assert "granola" in str(A.DATA_DIR)
 
@@ -247,7 +247,7 @@ def test_config_dir_honours_env_override(tmp_path, monkeypatch):
 def test_install_plist_is_wellformed(tmp_path, monkeypatch):
     """The generated launchd job must use absolute paths and survive plistlib."""
     import plistlib, subprocess as sp
-    from granola_router import service
+    from granola_organizer import service
     monkeypatch.setattr(service, "PLIST_PATH", tmp_path / "test.plist")
     monkeypatch.setattr(service, "LOG_DIR", tmp_path / "logs")
     monkeypatch.setattr(service.sys, "platform", "darwin")
@@ -267,14 +267,14 @@ def test_install_plist_is_wellformed(tmp_path, monkeypatch):
     # A poll loop that exits cleanly has stopped early. SuccessfulExit:false
     # would leave it dead in exactly that case.
     assert data["KeepAlive"] is True, "a clean exit from the poller is still a failure"
-    assert data["EnvironmentVariables"]["GRANOLA_ROUTER_HOME"], \
+    assert data["EnvironmentVariables"]["GRANOLA_ORGANIZER_HOME"], \
         "the daemon cannot inherit config from Claude, so it must be pinned"
 
 
 def test_daemon_never_points_into_the_extension_folder(tmp_path, monkeypatch):
     """A launch agent aimed inside Claude's extension dir breaks on uninstall."""
-    from granola_router import service
-    ext = tmp_path / "Claude" / "extensions" / "granola" / "granola-router"
+    from granola_organizer import service
+    ext = tmp_path / "Claude" / "extensions" / "granola" / "granola-organizer"
     ext.parent.mkdir(parents=True)
     ext.write_bytes(b"binary")
     monkeypatch.setattr(service, "BIN_ROOT", tmp_path / "stable")
@@ -289,12 +289,12 @@ def test_daemon_never_points_into_the_extension_folder(tmp_path, monkeypatch):
 
 def test_new_build_repoints_current_so_upgrades_take_effect(tmp_path, monkeypatch):
     """Without this, launchd keeps running the old binary after an upgrade."""
-    from granola_router import service
+    from granola_organizer import service
     monkeypatch.setattr(service, "BIN_ROOT", tmp_path / "s")
     monkeypatch.setattr(service, "VERSIONS", tmp_path / "s" / "versions")
     monkeypatch.setattr(service, "CURRENT", tmp_path / "s" / "current")
     monkeypatch.setattr(service, "running_frozen", lambda: True)
-    live = tmp_path / "s" / "current" / "granola-router"
+    live = tmp_path / "s" / "current" / "granola-organizer"
 
     v1 = tmp_path / "v1"; v1.write_bytes(b"BUILD ONE")
     monkeypatch.setattr(service.sys, "executable", str(v1))
@@ -313,7 +313,7 @@ def test_new_build_repoints_current_so_upgrades_take_effect(tmp_path, monkeypatc
 def test_status_flags_a_launch_agent_pointing_at_nothing(tmp_path, monkeypatch):
     """The exact failure that killed the previous daemon when its repo moved."""
     import plistlib
-    from granola_router import service
+    from granola_organizer import service
     plist = tmp_path / "p.plist"
     with open(plist, "wb") as fh:
         plistlib.dump({"Label": service.LABEL,
@@ -325,7 +325,7 @@ def test_status_flags_a_launch_agent_pointing_at_nothing(tmp_path, monkeypatch):
 
 def test_service_functions_print_nothing(capsys, tmp_path, monkeypatch):
     """stdout must stay clean: these run inside a stdio MCP server."""
-    from granola_router import service
+    from granola_organizer import service
     monkeypatch.setattr(service, "PLIST_PATH", tmp_path / "none.plist")
     service.launch_agent_state()
     service.uninstall_launch_agent()
@@ -336,9 +336,9 @@ def test_service_functions_print_nothing(capsys, tmp_path, monkeypatch):
 def test_archive_is_visible_without_state(tmp_path, monkeypatch):
     """Losing state.json must not make an intact archive look empty."""
     pytest.importorskip("mcp", reason="MCP SDK is only needed to build the extension")
-    from granola_router import mcp_server as ms
-    from granola_router.writer import render, write_atomic
-    from granola_router.api import Meeting
+    from granola_organizer import mcp_server as ms
+    from granola_organizer.writer import render, write_atomic
+    from granola_organizer.api import Meeting
 
     root = tmp_path / "Meetings" / "clients" / "Acme"
     m = Meeting(id="not_ONDISK00001", title="Acme sync",
@@ -377,12 +377,12 @@ def test_frozen_entry_point_dispatches_on_argv():
     def fake_serve():
         called["serve"] = True
 
-    import granola_router.cli as C
-    import granola_router.mcp_server as M
+    import granola_organizer.cli as C
+    import granola_organizer.mcp_server as M
     orig_cli, orig_serve = C.main, getattr(M, "main", None)
     C.main = fake_cli
     try:
-        sys.argv = ["granola-router", "poll", "--interval", "120"]
+        sys.argv = ["granola-organizer", "poll", "--interval", "120"]
         assert entry_mcp.main() == 0
         assert called.get("cli") == ["poll", "--interval", "120"], \
             "launchd's argv must reach the CLI, not start an MCP server"
@@ -397,26 +397,26 @@ def test_frozen_entry_point_serves_mcp_with_no_arguments(monkeypatch):
     """Claude Desktop spawns it bare; that path must still be the MCP server."""
     import entry_mcp
     seen = {}
-    import granola_router.mcp_server as M
+    import granola_organizer.mcp_server as M
     monkeypatch.setattr(M, "main", lambda: seen.setdefault("serve", True))
-    monkeypatch.setattr(sys, "argv", ["granola-router-mcp"])
+    monkeypatch.setattr(sys, "argv", ["granola-organizer-mcp"])
     assert entry_mcp.main() == 0
     assert seen.get("serve") is True
 
 
 def test_frozen_entry_point_rejects_an_unknown_command(monkeypatch, capsys):
     import entry_mcp
-    monkeypatch.setattr(sys, "argv", ["granola-router", "wat"])
+    monkeypatch.setattr(sys, "argv", ["granola-organizer", "wat"])
     assert entry_mcp.main() == 2
     assert "unknown command" in capsys.readouterr().err
 
 
 def test_a_loaded_job_with_no_pid_is_not_running(tmp_path, monkeypatch):
-    """`-  0  com.granola-router.poll` means it exited, not that it is filing."""
+    """`-  0  com.granola-organizer.poll` means it exited, not that it is filing."""
     import plistlib, subprocess as sp
-    from granola_router import service
+    from granola_organizer import service
     plist = tmp_path / "p.plist"
-    binary = tmp_path / "granola-router"
+    binary = tmp_path / "granola-organizer"
     binary.write_bytes(b"#!/bin/sh\n"); os.chmod(binary, 0o755)
     with open(plist, "wb") as fh:
         plistlib.dump({"Label": service.LABEL,
@@ -424,12 +424,12 @@ def test_a_loaded_job_with_no_pid_is_not_running(tmp_path, monkeypatch):
                        # Pinned so this test isolates the pid check rather than
                        # tripping the separate config-mismatch rule.
                        "EnvironmentVariables": {
-                           "GRANOLA_ROUTER_HOME": str(service.DATA_DIR)}}, fh)
+                           "GRANOLA_ORGANIZER_HOME": str(service.DATA_DIR)}}, fh)
     monkeypatch.setattr(service, "PLIST_PATH", plist)
     monkeypatch.setattr(service, "HEALTH_FILE", tmp_path / "daemon.json")
     # launchctl reports the job as loaded, with a last exit status and no PID.
     monkeypatch.setattr(service.subprocess, "run", lambda *a, **k: sp.CompletedProcess(
-        a, 0, '{\n\t"LastExitStatus" = 0;\n\t"Label" = "com.granola-router.poll";\n}\n', ""))
+        a, 0, '{\n\t"LastExitStatus" = 0;\n\t"Label" = "com.granola-organizer.poll";\n}\n', ""))
     st = service.launch_agent_state()
     assert st["loaded"] is True
     assert st["running"] is False, "no PID key means the daemon is not running"
@@ -440,7 +440,7 @@ def test_a_loaded_job_with_no_pid_is_not_running(tmp_path, monkeypatch):
 def test_enable_refuses_to_claim_success_when_the_job_dies(tmp_path, monkeypatch):
     """A binary that exits immediately must surface as an error, not 'on'."""
     import subprocess as sp
-    from granola_router import service
+    from granola_organizer import service
     monkeypatch.setattr(service, "PLIST_PATH", tmp_path / "p.plist")
     monkeypatch.setattr(service, "LOG_DIR", tmp_path / "logs")
     monkeypatch.setattr(service, "HEALTH_FILE", tmp_path / "daemon.json")
@@ -457,7 +457,7 @@ def test_enable_refuses_to_claim_success_when_the_job_dies(tmp_path, monkeypatch
 def test_a_stale_heartbeat_reads_as_failed(tmp_path, monkeypatch):
     """A live pid is not enough; the daemon has to be completing checks."""
     import time as T
-    from granola_router import service
+    from granola_organizer import service
     monkeypatch.setattr(service, "HEALTH_FILE", tmp_path / "daemon.json")
     state = {"installed": True, "running": True, "loaded": True, "pid": 99,
              "broken": False, "command": ["/x", "poll"], "config_mismatch": False,
@@ -468,7 +468,7 @@ def test_a_stale_heartbeat_reads_as_failed(tmp_path, monkeypatch):
 
 def test_config_mismatch_is_reported(tmp_path):
     """A daemon filing into a different folder than status reads is broken."""
-    from granola_router import service
+    from granola_organizer import service
     state = {"installed": True, "running": True, "loaded": True, "pid": 99,
              "broken": False, "command": ["/x", "poll"], "config_mismatch": True,
              "config_home": "/somewhere/else", "heartbeat_stale": False,
@@ -479,7 +479,7 @@ def test_config_mismatch_is_reported(tmp_path):
 
 def test_prune_keeps_the_running_binary(tmp_path, monkeypatch):
     """Pruning before the new daemon is proven throws away the rollback."""
-    from granola_router import service
+    from granola_organizer import service
     monkeypatch.setattr(service, "BIN_ROOT", tmp_path / "s")
     monkeypatch.setattr(service, "VERSIONS", tmp_path / "s" / "versions")
     monkeypatch.setattr(service, "CURRENT", tmp_path / "s" / "current")
@@ -487,7 +487,7 @@ def test_prune_keeps_the_running_binary(tmp_path, monkeypatch):
     for name in ("aaa", "bbb", "ccc"):
         d = tmp_path / "s" / "versions" / name
         d.mkdir(parents=True)
-        (d / "granola-router").write_bytes(b"x")
+        (d / "granola-organizer").write_bytes(b"x")
     (tmp_path / "s" / "current").symlink_to(tmp_path / "s" / "versions" / "ccc")
     service.prune_old_versions(keep="ccc", retain=2)
     left = {p.name for p in (tmp_path / "s" / "versions").iterdir()}
@@ -497,7 +497,7 @@ def test_prune_keeps_the_running_binary(tmp_path, monkeypatch):
 
 def test_poll_interval_is_clamped(monkeypatch):
     """time.sleep(-1) inside a daemon crashes it outside the loop's own try."""
-    from granola_router import cli as C
+    from granola_organizer import cli as C
     slept = []
     monkeypatch.setattr(C.time, "sleep", lambda s: (slept.append(s), (_ for _ in ()).throw(KeyboardInterrupt()))[0])
     monkeypatch.setattr(C.service, "daemon_started", lambda i: None)
@@ -524,7 +524,7 @@ def test_enable_is_not_fooled_by_a_crash_looping_binary(tmp_path, monkeypatch):
     still shows a pid on every restart. Only a fresh heartbeat proves the poll
     loop actually started. Found by a live run, not by reading the code."""
     import subprocess as sp
-    from granola_router import service
+    from granola_organizer import service
     monkeypatch.setattr(service, "PLIST_PATH", tmp_path / "p.plist")
     monkeypatch.setattr(service, "LOG_DIR", tmp_path / "logs")
     monkeypatch.setattr(service, "HEALTH_FILE", tmp_path / "daemon.json")
@@ -544,7 +544,7 @@ def test_enable_is_not_fooled_by_a_crash_looping_binary(tmp_path, monkeypatch):
 
 def test_a_stale_heartbeat_from_a_previous_daemon_is_not_trusted():
     """Running, but nothing has ever reported in, is a failure not 'on'."""
-    from granola_router import service
+    from granola_organizer import service
     state = {"installed": True, "running": True, "loaded": True, "pid": 5,
              "broken": False, "command": ["/x", "poll"], "config_mismatch": False,
              "heartbeat_age_seconds": None, "heartbeat_stale": False,
@@ -557,7 +557,7 @@ def test_a_foreign_heartbeat_cannot_verify_this_install(tmp_path, monkeypatch):
     """Codex's race: another poller writes a fresh heartbeat while the job we
     just installed is dead. Generation tokens make the two distinguishable."""
     import json as J, time as T
-    from granola_router import service
+    from granola_organizer import service
     health = tmp_path / "daemon.json"
     monkeypatch.setattr(service, "HEALTH_FILE", health)
     monkeypatch.setattr(service, "_launchctl_job",
@@ -575,7 +575,7 @@ def test_a_foreign_heartbeat_cannot_verify_this_install(tmp_path, monkeypatch):
 def test_started_but_no_completed_check_is_not_reported_as_filing(tmp_path, monkeypatch):
     """Proving the loop started is weaker than proving it completed a check."""
     import json as J, time as T
-    from granola_router import service
+    from granola_organizer import service
     health = tmp_path / "daemon.json"
     monkeypatch.setattr(service, "HEALTH_FILE", health)
     monkeypatch.setattr(service, "_launchctl_job", lambda: {"loaded": True, "PID": 7})
@@ -590,7 +590,7 @@ def test_started_but_no_completed_check_is_not_reported_as_filing(tmp_path, monk
 def test_a_plist_with_no_pinned_config_is_flagged(tmp_path, monkeypatch):
     """An old plist resolves config at runtime, which may not be ours."""
     import plistlib
-    from granola_router import service
+    from granola_organizer import service
     plist = tmp_path / "p.plist"
     binary = tmp_path / "gr"; binary.write_bytes(b"x"); os.chmod(binary, 0o755)
     with open(plist, "wb") as fh:
@@ -606,7 +606,7 @@ def test_a_plist_with_no_pinned_config_is_flagged(tmp_path, monkeypatch):
 def test_health_writes_do_not_clobber_another_daemons_record(tmp_path, monkeypatch):
     """Two pollers sharing a config must not take turns looking healthy."""
     import json as J
-    from granola_router import service
+    from granola_organizer import service
     health = tmp_path / "daemon.json"
     monkeypatch.setattr(service, "HEALTH_FILE", health)
     health.write_text(J.dumps({"pid": os.getpid() + 99999, "started_at": 1.0}))
@@ -618,7 +618,7 @@ def test_health_writes_do_not_clobber_another_daemons_record(tmp_path, monkeypat
 def test_failed_bootstrap_leaves_no_plist(tmp_path, monkeypatch):
     """launchctl refusing the job must not leave one to load at next login."""
     import subprocess as sp
-    from granola_router import service
+    from granola_organizer import service
     monkeypatch.setattr(service, "PLIST_PATH", tmp_path / "p.plist")
     monkeypatch.setattr(service, "LOG_DIR", tmp_path / "logs")
     monkeypatch.setattr(service, "HEALTH_FILE", tmp_path / "d.json")
@@ -637,7 +637,7 @@ def test_staged_binary_carries_no_blocking_xattrs(tmp_path, monkeypatch):
     path. Measured: identical bytes run in a second without them and never
     start with them, so launchd just sits there filing nothing."""
     import sys as S
-    from granola_router import service
+    from granola_organizer import service
     if S.platform != "darwin":
         pytest.skip("extended attributes are a macOS concern")
     monkeypatch.setattr(service, "BIN_ROOT", tmp_path / "s")
@@ -659,8 +659,34 @@ def test_staged_binary_carries_no_blocking_xattrs(tmp_path, monkeypatch):
     r = service.install_stable_binary()
     assert r["stable"]
 
-    staged = tmp_path / "s" / "current" / "granola-router"
+    staged = tmp_path / "s" / "current" / "granola-organizer"
     attrs = attrs_of(staged)
     assert "com.apple.quarantine" not in attrs, f"staged copy still quarantined: {attrs}"
     assert "com.apple.provenance" not in attrs, f"staged copy carries provenance: {attrs}"
     assert staged.read_bytes() == src.read_bytes(), "content must be identical"
+
+
+def test_legacy_launch_agents_are_retired_on_install(tmp_path, monkeypatch):
+    """This tool has been renamed twice. An agent left under an old label keeps
+    polling forever, is invisible to a status command that only knows the
+    current label, and two pollers overwrite each other's files every cycle."""
+    from granola_organizer import service
+    home = tmp_path / "home"
+    (home / "Library" / "LaunchAgents").mkdir(parents=True)
+    monkeypatch.setattr(service.Path, "home", staticmethod(lambda: home))
+    stale = home / "Library" / "LaunchAgents" / "com.granola-router.poll.plist"
+    stale.write_text("<plist/>")
+
+    calls = []
+    def fake_run(*args):
+        calls.append(args)
+        import subprocess as sp
+        # `launchctl list <label>` returning 0 means the job is loaded.
+        rc = 0 if args[:2] == ("launchctl", "list") else 0
+        return sp.CompletedProcess(list(args), rc, "", "")
+    monkeypatch.setattr(service, "_run", fake_run)
+
+    retired = service.retire_legacy_agents()
+    assert "com.granola-router.poll" in retired
+    assert not stale.exists(), "the stale plist must be removed, not just unloaded"
+    assert any("bootout" in a for c in calls for a in c), "must stop the running job too"

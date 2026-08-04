@@ -13,7 +13,7 @@ the CLI path must not require the `mcp` package to be importable.
 
 import sys
 
-# Kept in step with the subparsers in granola_router.cli.main. A name here that
+# Kept in step with the subparsers in granola_organizer.cli.main. A name here that
 # argparse does not know still reaches argparse, which prints its own usage.
 CLI_COMMANDS = {"backfill", "poll", "status", "install", "uninstall", "domains"}
 SERVE_ALIASES = {"mcp", "serve"}
@@ -23,16 +23,16 @@ def main() -> int:
     argv = sys.argv[1:]
 
     if not argv or argv[0] in SERVE_ALIASES:
-        from granola_router.mcp_server import main as serve
+        from granola_organizer.mcp_server import main as serve
         serve()
         return 0
 
     if argv[0] in CLI_COMMANDS or argv[0] in ("-h", "--help", "-v", "--verbose"):
-        from granola_router.cli import main as cli
+        from granola_organizer.cli import main as cli
         return cli(argv)
 
     sys.stderr.write(
-        f"granola-router: unknown command {argv[0]!r}\n"
+        f"granola-organizer: unknown command {argv[0]!r}\n"
         "  no arguments, or 'mcp': run the MCP server on stdio\n"
         f"  {', '.join(sorted(CLI_COMMANDS))}: run that command\n"
     )
